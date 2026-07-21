@@ -231,10 +231,20 @@ export default function App() {
       });
     });
 
-    // Merge civitai models / master list models — preserve all unique URLs
+    // Merge civitai models / master list models — preserve all unique URLs & attach URLs to unlinked workflow models
     civitaiModels.forEach(cm => {
       const urlKey = cm.url ? cm.url.toLowerCase() : '';
       const nameKey = cm.name ? cm.name.toLowerCase() : '';
+
+      // If a model with same filename exists without a download URL, attach this URL!
+      if (nameKey && modelsMap.has(nameKey)) {
+        const existing = modelsMap.get(nameKey);
+        if (!existing.url && cm.url) {
+          existing.url = cm.url;
+          if (cm.size && cm.size !== 'Unknown') existing.size = cm.size;
+        }
+      }
+
       const key = urlKey || (nameKey && !['lenovo.safetensors', 'model.safetensors'].includes(nameKey) ? nameKey : '') || cm.id;
 
       if (key && !modelsMap.has(key)) {
