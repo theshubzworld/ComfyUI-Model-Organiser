@@ -5,8 +5,8 @@
  */
 import { getDb, upsertCache } from './_db.js';
 
-function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
-function getHfToken() { return process.env.VITE_HF_TOKEN || process.env.HF_TOKEN || ''; }
+function getCivitaiToken() { return process.env.CIVITAI_TOKEN || process.env.VITE_CIVITAI_TOKEN || ''; }
+function getHfToken() { return process.env.HF_TOKEN || process.env.VITE_HF_TOKEN || ''; }
 
 function bytesToHuman(bytes) {
   const mb = bytes / (1024 * 1024);
@@ -20,19 +20,22 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  let requestUrl = '';
+  try {
     let body = req.body;
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (_) {}
     }
     const { url, hfToken: clientHf, civitaiToken: clientCivitai } = body || {};
-    if (!url) return res.status(400).json({ error: 'url is required' });
+    requestUrl = url || '';
+    if (!requestUrl) return res.status(200).json({ url: '', size: 'Unknown' });
 
     const hfToken = clientHf || getHfToken();
     const civitaiToken = clientCivitai || getCivitaiToken();
 
-    let fetchUrl = url;
-    if (civitaiToken && (url.includes('civitai.com') || url.includes('civitai.red')) && !url.includes('token=')) {
-      fetchUrl += (url.includes('?') ? '&' : '?') + `token=${civitaiToken}`;
+    let fetchUrl = requestUrl;
+    if (civitaiToken && (requestUrl.includes('civitai.com') || requestUrl.includes('civitai.red')) && !requestUrl.includes('token=')) {
+      fetchUrl += (requestUrl.includes('?') ? '&' : '?') + `token=${civitaiToken}`;
     }
 
     const baseHeaders = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
@@ -43,19 +46,17 @@ export default async function handler(req, res) {
 
     let sizeStr = 'Unknown';
 
-    // Method A: HEAD
-    if (sizeStr === 'Unknown') {
-      try {
-        const r = await fetch(fetchUrl, { method: 'HEAD', headers: baseHeaders, redirect: 'follow', signal: AbortSignal.timeout(8000) });
-        const cl = r.headers.get('content-length');
-        if (cl) sizeStr = bytesToHuman(parseInt(cl, 10));
-      } catch (_) {}
-    }
+    // Method A: HEAD request
+    try {
+      const r = await fetch(fetchUrl, { method: 'HEAD', headers: baseHeaders, redirect: 'follow', signal: AbortSignal.timeout(6000) });
+      const cl = r.headers.get('content-length');
+      if (cl) sizeStr = bytesToHuman(parseInt(cl, 10));
+    } catch (_) {}
 
-    // Method B: Range request
+    // Method B: Range request fallback
     if (sizeStr === 'Unknown') {
       try {
-        const r = await fetch(fetchUrl, { method: 'GET', headers: { ...baseHeaders, Range: 'bytes=0-10' }, redirect: 'follow', signal: AbortSignal.timeout(8000) });
+        const r = await fetch(fetchUrl, { method: 'GET', headers: { ...baseHeaders, Range: 'bytes=0-10' }, redirect: 'follow', signal: AbortSignal.timeout(6000) });
         const cr = r.headers.get('content-range');
         if (cr && cr.includes('/')) {
           const total = parseInt(cr.split('/').pop(), 10);
@@ -65,13 +66,13 @@ export default async function handler(req, res) {
     }
 
     // Method C: CivitAI Model Version API
-    if (sizeStr === 'Unknown' && (url.includes('civitai.com') || url.includes('civitai.red'))) {
+    if (sizeStr === 'Unknown' && (requestUrl.includes('civitai.com') || requestUrl.includes('civitai.red'))) {
       try {
-        const match = url.match(/\/models\/(\d+)/);
+        const match = requestUrl.match(/\/models\/(\d+)/);
         if (match) {
           let apiUrl = `https://civitai.com/api/v1/model-versions/${match[1]}`;
           if (civitaiToken) apiUrl += `?token=${civitaiToken}`;
-          const r = await fetch(apiUrl, { headers: baseHeaders, signal: AbortSignal.timeout(8000) });
+          const r = await fetch(apiUrl, { headers: baseHeaders, signal: AbortSignal.timeout(6000) });
           if (r.ok) {
             const data = await r.json();
             const primary = (data.files || []).find(f => f.primary) || data.files?.[0];
@@ -85,9 +86,9 @@ export default async function handler(req, res) {
     }
 
     // Method D: HuggingFace API
-    if (sizeStr === 'Unknown' && url.includes('huggingface.co')) {
+    if (sizeStr === 'Unknown' && requestUrl.includes('huggingface.co')) {
       try {
-        const parts = url.split('?')[0].split('/');
+        const parts = requestUrl.split('?')[0].split('/');
         for (const marker of ['resolve', 'blob', 'raw']) {
           const idx = parts.indexOf(marker);
           if (idx > 3) {
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
             const fname = parts.slice(idx + 2).join('/');
             const hfH = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
             if (hfToken) hfH['Authorization'] = `Bearer ${hfToken}`;
-            const r = await fetch(`https://huggingface.co/api/models/${repoId}`, { headers: hfH, signal: AbortSignal.timeout(8000) });
+            const r = await fetch(`https://huggingface.co/api/models/${repoId}`, { headers: hfH, signal: AbortSignal.timeout(6000) });
             if (r.ok) {
               const data = await r.json();
               const sib = (data.siblings || []).find(s => s.rfilename === fname);
@@ -110,17 +111,13 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    // Cache to Supabase if we found a size
+    // Cache result if size was found
     if (sizeStr !== 'Unknown') {
-      try {
-        await upsertCache(getDb(), url, { size: sizeStr });
-      } catch (e) {
-        console.warn('[check-size] Cache write failed:', e.message);
-      }
+      await upsertCache(getDb(), requestUrl, { size: sizeStr }).catch(() => {});
     }
 
-    return res.status(200).json({ url, size: sizeStr });
+    return res.status(200).json({ url: requestUrl, size: sizeStr });
   } catch (err) {
-    return res.status(200).json({ url: req.body?.url || '', size: 'Unknown', error: err.message });
+    return res.status(200).json({ url: requestUrl, size: 'Unknown', error: err.message });
   }
 }
