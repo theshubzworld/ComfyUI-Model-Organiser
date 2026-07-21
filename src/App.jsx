@@ -291,27 +291,35 @@ export default function App() {
   const attemptedResolveRef = useRef(new Set());
 
   useEffect(() => {
-    // Count name frequencies to detect duplicate placeholder names
+    // Count name frequencies to detect duplicate names across distinct URLs
     const nameCounts = {};
     activeModelsFiltered.forEach(m => {
-      if (m.name) nameCounts[m.name] = (nameCounts[m.name] || 0) + 1;
+      if (m.name && m.url) nameCounts[m.name] = (nameCounts[m.name] || 0) + 1;
     });
 
     const unmappedCivitai = activeModelsFiltered.filter(m => 
       m.url &&
-      (!m.name || /^\d+$/.test(m.name) || m.name.startsWith('civitai_') || nameCounts[m.name] > 1) &&
+      (
+        !m.name || 
+        /^\d+$/.test(m.name) || 
+        m.name.startsWith('civitai_') || 
+        (nameCounts[m.name] > 1 && !attemptedResolveRef.current.has(m.id + '_dup'))
+      ) &&
       !attemptedResolveRef.current.has(m.id)
     );
 
     if (!unmappedCivitai.length) return;
 
     // Mark these model IDs as attempted to prevent infinite loop re-renders
-    unmappedCivitai.forEach(m => attemptedResolveRef.current.add(m.id));
+    unmappedCivitai.forEach(m => {
+      attemptedResolveRef.current.add(m.id);
+      if (nameCounts[m.name] > 1) attemptedResolveRef.current.add(m.id + '_dup');
+    });
 
     fetch('/api/resolve-civitai-names', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ models: unmappedCivitai })
+      body: JSON.stringify({ models: unmappedCivitai, force: true })
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {

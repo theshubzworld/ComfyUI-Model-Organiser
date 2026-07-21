@@ -1046,15 +1046,98 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
         # ── /api/analyze-links ───────────────────────────────────────────────
         elif self.path.startswith("/api/analyze-links"):
             try:
-                data = json.loads(post_data)
+                data = json.loads(post_data) if post_data else {}
                 models = data.get("models", [])
                 master_models = parse_model_list_txt(MODEL_LIST_TXT)
+                cache = load_model_cache()
+
                 issues = []
                 valid_count = 0
                 total_audited = len(models)
+                flagged_ids = set()
+
+                name_map = {}
+                url_map = {}
 
                 for m in models:
                     mid = m.get("id") or m.get("name") or ""
+                    raw_name = (m.get("name") or "").strip()
+                    raw_url = (m.get("url") or "").strip()
+
+                    clean_n = raw_name.lower()
+                    clean_u = raw_url.lower()
+
+                    if clean_n and clean_n not in ("unnamed model", "model.safetensors"):
+                        name_map.setdefault(clean_n, []).append(m)
+                    if clean_u:
+                        url_map.setdefault(clean_u, []).append(m)
+
+                # Check for Duplicate Names with DIFFERENT URLs (Stale Cached Names)
+                for lower_name, models_with_name in name_map.items():
+                    if len(models_with_name) > 1:
+                        distinct_urls = set(m.get("url", "").strip().lower() for m in models_with_name if m.get("url"))
+                        if len(distinct_urls) > 1:
+                            for m in models_with_name:
+                                mid = m.get("id")
+                                murl = (m.get("url") or "").strip()
+                                if not murl or mid in flagged_ids:
+                                    continue
+                                flagged_ids.add(mid)
+
+                                true_name = ""
+                                if "huggingface.co" in murl:
+                                    try:
+                                        parts = [p for p in murl.split("?")[0].split("/") if p]
+                                        if parts and re.search(r'\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$', parts[-1], re.I):
+                                            true_name = parts[-1]
+                                    except Exception:
+                                        pass
+
+                                clean_key, _ = extract_token_from_url(murl.replace("civitai.red", "civitai.com"))
+                                cached = cache.get(clean_key)
+                                if cached and cached.get("name") and cached["name"].lower() != lower_name:
+                                    true_name = cached["name"]
+
+                                issues.append({
+                                    "id": mid,
+                                    "name": m.get("name", "Unnamed Model"),
+                                    "folder": (m.get("folder") or "checkpoints").replace("models/", ""),
+                                    "type": "stale_name",
+                                    "currentUrl": murl,
+                                    "suggestedUrl": murl,
+                                    "suggestedSize": m.get("size") or "",
+                                    "suggestedName": true_name or "",
+                                    "confidence": "High",
+                                    "note": "Same name found on different URLs — past caching mismatch",
+                                })
+
+                # Check for Exact Duplicate Links
+                for lower_url, models_with_url in url_map.items():
+                    if len(models_with_url) > 1:
+                        for m in models_with_url[1:]:
+                            mid = m.get("id")
+                            if mid in flagged_ids:
+                                continue
+                            flagged_ids.add(mid)
+
+                            issues.append({
+                                "id": mid,
+                                "name": m.get("name", "Unnamed Model"),
+                                "folder": (m.get("folder") or "checkpoints").replace("models/", ""),
+                                "type": "duplicate_link",
+                                "currentUrl": m.get("url", ""),
+                                "suggestedUrl": "",
+                                "suggestedSize": "",
+                                "suggestedName": "",
+                                "confidence": "High",
+                                "note": "Duplicate link entry in table",
+                            })
+
+                for m in models:
+                    mid = m.get("id") or m.get("name") or ""
+                    if mid in flagged_ids:
+                        continue
+
                     mname = m.get("name", "Unnamed Model")
                     mfolder = (m.get("folder") or "checkpoints").replace("models/", "")
                     murl = (m.get("url") or "").strip()
@@ -1088,6 +1171,20 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                         })
                     elif murl.startswith("http"):
                         valid_count += 1
+                        is_name_placeholder = not mname or re.match(r'^\d+$', str(mname)) or str(mname).startswith("civitai_") or str(mname).startswith("UTF")
+                        is_size_unknown = not m.get("size") or m.get("size") == "Unknown"
+                        if is_name_placeholder or is_size_unknown:
+                            issues.append({
+                                "id": mid,
+                                "name": mname,
+                                "folder": mfolder,
+                                "type": "name" if is_name_placeholder else "size",
+                                "currentUrl": murl,
+                                "suggestedUrl": murl,
+                                "suggestedSize": m.get("size") if m.get("size") != "Unknown" else "",
+                                "suggestedName": "",
+                                "confidence": "High",
+                            })
                     else:
                         issues.append({
                             "id": mid,
