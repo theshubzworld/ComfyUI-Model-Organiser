@@ -1,7 +1,8 @@
 /**
  * api/check-size.js — Vercel Serverless Function
  * Server-side file size & filename checker. Tries HEAD → Range → CivitAI API → HF API.
- * Saves results to Supabase model_cache.
+ * Detects broken links (HTTP 401, 403, 404, 500) and returns descriptive errors.
+ * Saves valid results to Supabase model_cache.
  */
 import { getDb, upsertCache, cleanName } from './_db.js';
 
@@ -61,6 +62,9 @@ export default async function handler(req, res) {
     // Method A: HEAD request (checks Content-Length & Content-Disposition header)
     try {
       const r = await fetch(fetchUrl, { method: 'HEAD', headers: baseHeaders, redirect: 'follow', signal: AbortSignal.timeout(6000) });
+      if (r.status >= 400) {
+        return res.status(200).json({ url: requestUrl, size: 'Unknown', name: '', error: `HTTP ${r.status}` });
+      }
       const cl = r.headers.get('content-length');
       if (cl) sizeStr = bytesToHuman(parseInt(cl, 10));
 
@@ -75,6 +79,9 @@ export default async function handler(req, res) {
     if (sizeStr === 'Unknown') {
       try {
         const r = await fetch(fetchUrl, { method: 'GET', headers: { ...baseHeaders, Range: 'bytes=0-10' }, redirect: 'follow', signal: AbortSignal.timeout(6000) });
+        if (r.status >= 400) {
+          return res.status(200).json({ url: requestUrl, size: 'Unknown', name: '', error: `HTTP ${r.status}` });
+        }
         const cr = r.headers.get('content-range');
         if (cr && cr.includes('/')) {
           const total = parseInt(cr.split('/').pop(), 10);
@@ -96,6 +103,9 @@ export default async function handler(req, res) {
           let apiUrl = `https://civitai.com/api/v1/model-versions/${match[1]}`;
           if (civitaiToken) apiUrl += `?token=${civitaiToken}`;
           const r = await fetch(apiUrl, { headers: baseHeaders, signal: AbortSignal.timeout(6000) });
+          if (r.status >= 400) {
+            return res.status(200).json({ url: requestUrl, size: 'Unknown', name: '', error: `HTTP ${r.status}` });
+          }
           if (r.ok) {
             const data = await r.json();
             const primary = (data.files || []).find(f => f.primary) || data.files?.[0];
@@ -123,6 +133,9 @@ export default async function handler(req, res) {
             const hfH = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
             if (hfToken) hfH['Authorization'] = `Bearer ${hfToken}`;
             const r = await fetch(`https://huggingface.co/api/models/${repoId}`, { headers: hfH, signal: AbortSignal.timeout(6000) });
+            if (r.status >= 400) {
+              return res.status(200).json({ url: requestUrl, size: 'Unknown', name: '', error: `HTTP ${r.status}` });
+            }
             if (r.ok) {
               const data = await r.json();
               const sib = (data.siblings || []).find(s => s.rfilename === fname);

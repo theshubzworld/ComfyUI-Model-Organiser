@@ -298,6 +298,15 @@ export const ModelTable = memo(function ModelTable({
                     <Link className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
                     <span className="truncate">{model.url}</span>
                   </a>
+                  {model.error && (
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-extrabold uppercase border tracking-wider shrink-0 ${
+                      model.error.includes('401') || model.error.includes('403')
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/35'
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/35'
+                    }`} title={`Link returned error: ${model.error}`}>
+                      {model.error}
+                    </span>
+                  )}
                   <button
                     onClick={() => handleCopyLink(model.url, model.id)}
                     title="Copy URL"

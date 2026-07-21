@@ -965,6 +965,9 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                     # Method A: Try HEAD request
                     try:
                         r = requests.head(url, headers=req_headers, allow_redirects=True, timeout=8)
+                        if r.status_code >= 400:
+                            self.send_json(200, {"url": url, "size": "Unknown", "name": "", "error": f"HTTP {r.status_code}"})
+                            return
                         if "Content-Length" in r.headers:
                             total = int(r.headers["Content-Length"])
                             mb = total / (1024 * 1024)
@@ -981,6 +984,9 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                                 allow_redirects=True,
                                 timeout=8,
                             )
+                            if r2.status_code >= 400:
+                                self.send_json(200, {"url": url, "size": "Unknown", "name": "", "error": f"HTTP {r2.status_code}"})
+                                return
                             cr = r2.headers.get("Content-Range")
                             if cr and "/" in cr:
                                 total = int(cr.split("/")[-1])
@@ -1171,6 +1177,27 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                             "confidence": "High" if match else "Medium",
                         })
                     elif murl.startswith("http"):
+                        has_error = m.get("error")
+                        clean_key, _ = extract_token_from_url(murl.replace("civitai.red", "civitai.com"))
+                        cached = cache.get(clean_key)
+                        if not has_error and cached and isinstance(cached, dict) and cached.get("error"):
+                            has_error = cached.get("error")
+
+                        if has_error:
+                            issues.append({
+                                "id": mid,
+                                "name": mname,
+                                "folder": mfolder,
+                                "type": "broken",
+                                "currentUrl": murl,
+                                "suggestedUrl": "",
+                                "suggestedSize": "",
+                                "suggestedName": "",
+                                "confidence": "Low",
+                                "note": f"Link returned error response: {has_error}",
+                            })
+                            continue
+
                         valid_count += 1
                         is_name_placeholder = not mname or re.match(r'^\d+$', str(mname)) or str(mname).startswith("civitai_") or str(mname).startswith("UTF")
                         is_size_unknown = not m.get("size") or m.get("size") == "Unknown"

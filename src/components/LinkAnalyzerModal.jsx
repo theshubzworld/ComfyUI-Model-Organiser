@@ -58,6 +58,7 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
 
   const counts = {
     all: issues.length,
+    broken: issues.filter(i => i.type === 'broken').length,
     stale_name: issues.filter(i => i.type === 'stale_name').length,
     duplicate_link: issues.filter(i => i.type === 'duplicate_link').length,
     missing: issues.filter(i => i.type === 'missing').length,
@@ -213,6 +214,7 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
                 <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl theme-surface border">
                   {[
                     { id: 'all', label: 'All', count: counts.all },
+                    { id: 'broken', label: 'Invalid/Broken Links', count: counts.broken },
                     { id: 'stale_name', label: 'Stale Name Mismatches', count: counts.stale_name },
                     { id: 'duplicate_link', label: 'Duplicate Links', count: counts.duplicate_link },
                     { id: 'missing', label: 'Missing Links', count: counts.missing },
@@ -270,9 +272,10 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
                             <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
                               {item.folder}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                             <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                               item.type === 'stale_name' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                               item.type === 'duplicate_link' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
+                              item.type === 'broken' ? 'bg-rose-600/35 text-rose-300 border border-rose-500/50' :
                               item.type === 'missing' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
                               item.type === 'search' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                               item.type === 'name' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' :
@@ -280,6 +283,7 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
                             }`}>
                               {item.type === 'stale_name' ? 'Stale Name Mismatch' :
                                item.type === 'duplicate_link' ? 'Duplicate Link' :
+                               item.type === 'broken' ? 'Invalid Link' :
                                item.type === 'missing' ? 'Missing URL' :
                                item.type === 'search' ? 'Search Placeholder' :
                                item.type === 'name' ? 'Unresolved Name' : 'Missing Size'}

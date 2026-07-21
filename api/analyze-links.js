@@ -232,9 +232,26 @@ export default async function handler(req, res) {
 
       // Case 3: Direct Download URL (http...)
       if (rawUrl.startsWith('http')) {
-        validCount++;
-
         const cached = cacheMap[cleanUrl(rawUrl)];
+        const hasError = m.error || cached?.error;
+
+        if (hasError) {
+          issues.push({
+            id,
+            name,
+            folder,
+            type: 'broken',
+            currentUrl: rawUrl,
+            suggestedUrl: '',
+            suggestedSize: '',
+            suggestedName: '',
+            confidence: 'Low',
+            note: `Link returned error response: ${hasError}`
+          });
+          continue;
+        }
+
+        validCount++;
         const effectiveSize = cached?.size || m.size || '';
         const effectiveName = cleanName(cached?.name || m.name, rawUrl) || '';
 

@@ -499,6 +499,9 @@ export default function App() {
           if (sizeResult.name && (isStaleName(model.name) || model.name === 'model.safetensors')) {
             updates.name = sizeResult.name;
           }
+          if (sizeResult.error) {
+            updates.error = sizeResult.error;
+          }
           if (Object.keys(updates).length > 0) {
             freshUpdates[model.id] = updates;
           }
