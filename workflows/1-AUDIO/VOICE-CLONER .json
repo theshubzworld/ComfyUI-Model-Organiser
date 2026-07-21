@@ -1,0 +1,310 @@
+{
+  "id": "7f33d090-57b6-4edb-acc9-e666db74f5af",
+  "revision": 0,
+  "last_node_id": 114,
+  "last_link_id": 147,
+  "nodes": [
+    {
+      "id": 107,
+      "type": "Label (rgthree)",
+      "pos": [
+        277.45627980922086,
+        -1557.2496025437163
+      ],
+      "size": [
+        729.736328125,
+        50
+      ],
+      "flags": {
+        "allow_interaction": true
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "CHATTERBOX VOICE CLONER",
+      "properties": {
+        "fontSize": 50,
+        "fontFamily": "Arial",
+        "fontColor": "#ffffff",
+        "textAlign": "left",
+        "backgroundColor": "transparent",
+        "padding": 0,
+        "borderRadius": 0,
+        "angle": 0
+      },
+      "color": "#fff0",
+      "bgcolor": "#fff0"
+    },
+    {
+      "id": 112,
+      "type": "ChatterboxTTS",
+      "pos": [
+        647.4562798092212,
+        -1437.2496025437163
+      ],
+      "size": [
+        418.18182373046875,
+        391.4545593261719
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio_prompt",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 131
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            132,
+            133,
+            134
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ChatterboxTTS",
+        "ver": "f0300cf84ee1b8fc9cbd38cb68cb3bace1895063",
+        "Node name for S&R": "ChatterboxTTS"
+      },
+      "widgets_values": [
+        "resembleai_default_voice",
+        "A small bird woke up early and saw the sunrise painting the sky in orange and pink.\nIt spread its wings and flew across the quiet village, singing a cheerful tune.\nDown below, a little girl looked up and smiled, waving as the bird circled above her.\nShe followed its flight until it landed on a tree near her window.\nEvery morning after that, the bird returned to greet her with its song.\nAnd soon, the girl and the bird became the best of friends.",
+        1000,
+        0.7,
+        0.5,
+        0.8,
+        0.5,
+        1.2,
+        0.05,
+        1,
+        915627302861971,
+        "randomize",
+        false
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 86,
+      "type": "PreviewAudio",
+      "pos": [
+        1097.4562798092206,
+        -1437.2496025437163
+      ],
+      "size": [
+        270,
+        90
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 132
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.40",
+        "Node name for S&R": "PreviewAudio",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 88,
+      "type": "SaveAudioMP3",
+      "pos": [
+        1097.4562798092206,
+        -1147.2496025437165
+      ],
+      "size": [
+        270,
+        136
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 134
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "Node name for S&R": "SaveAudioMP3"
+      },
+      "widgets_values": [
+        "AUDIO/0",
+        "V0"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 84,
+      "type": "LoadAudio",
+      "pos": [
+        287.45627980922086,
+        -1437.2496025437163
+      ],
+      "size": [
+        342.5999755859375,
+        136
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            131
+          ]
+        }
+      ],
+      "title": "Pick voice to clone",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.40",
+        "Node name for S&R": "LoadAudio",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "AUDIO MAN.MP3",
+        null,
+        null
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 87,
+      "type": "SaveAudio",
+      "pos": [
+        1097.4562798092206,
+        -1307.2496025437165
+      ],
+      "size": [
+        270,
+        112
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 133
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "Node name for S&R": "SaveAudio"
+      },
+      "widgets_values": [
+        "AUDIO/0"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    }
+  ],
+  "links": [
+    [
+      131,
+      84,
+      0,
+      112,
+      0,
+      "AUDIO"
+    ],
+    [
+      132,
+      112,
+      0,
+      86,
+      0,
+      "AUDIO"
+    ],
+    [
+      133,
+      112,
+      0,
+      87,
+      0,
+      "AUDIO"
+    ],
+    [
+      134,
+      112,
+      0,
+      88,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 2,
+      "title": "CHATTERBOX TTS TXT2AUDIO",
+      "bounding": [
+        277.45627980922086,
+        -1507.2496025437163,
+        1100,
+        509.6000061035156
+      ],
+      "color": "#ffffff",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "frontendVersion": "1.38.14",
+    "info": {
+      "name": "workflow",
+      "author": "",
+      "description": "",
+      "version": "1",
+      "created": "2025-01-14T21:02:01.367Z",
+      "modified": "2025-01-21T12:25:02.298Z",
+      "software": "ComfyUI"
+    },
+    "ue_links": [],
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true,
+    "workflowRendererVersion": "LG",
+    "ds": {
+      "scale": 0.37440476190476285,
+      "offset": [
+        2005.3493625799947,
+        2727.4460189854435
+      ]
+    }
+  },
+  "version": 0.4
+}

@@ -1,0 +1,52 @@
+
+https://civitai.com/api/download/models/368603?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+# --- ZIPS (Auto Extract) ---
+
+https://civitai.com/api/download/models/2387016?type=Model&format=Diffusers&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+https://civitai.com/api/download/models/2509620?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+https://civitai.com/api/download/models/2509701?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+https://civitai.com/api/download/models/2509620?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+https://civitai.com/api/download/models/2509701?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+https://civitai.red/api/download/models/2553271?fileId=2441662&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+https://civitai.red/api/download/models/2553151?fileId=2441563&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras
+
+# ====================================================================
+# COMFYUI Workflow - Model Shopping List
+# ====================================================================
+
+# --- Main Checkpoint & UNET ---
+
+https://civitai.com/api/download/models/2155386?type=Model&format=SafeTensor&size=pruned&fp=fp16&token=5b71d3f6812d0c5e8858e158d02e99f1 checkpoints/SDXL/lustifySDXLNSFW_ggwpV7.safetensors
+
+# Lenovo LoRA
+https://civitai.com/api/download/models/2066914?type=Model&format=SafeTensor&token=00d790b1d7a9934acb89ef729d04c75a loras/Wan/2.2/Wan2.2Lenovo.safetensors
+
+# --- misc loras ---
+
+https://civitai.com/api/download/models/1726904?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/boob_slider.safetensors
+
+https://civitai.com/api/download/models/1386847?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/weight_slider.safetensors
+
+https://civitai.com/api/download/models/550216?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/lady_hand.safetensors
+
+https://civitai.com/api/download/models/368603?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/detailed_nipples.safetensors
+
+https://civitai.com/api/download/models/238277?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/real_feet.safetensors
+
+https://civitai.com/api/download/models/2419374?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/ahegao.safetensors
+
+https://civitai.com/api/download/models/2474435?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/b3tternud3s_v3.safetensors
+
+# --- ZIPS (Auto Extract) ---
+
+https://civitai.com/api/download/models/2387016?type=Model&format=Diffusers&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/Wan_Pussy_Ass_Pack.zip
+
+https://civitai.com/api/download/models/2012120?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/pussy_helper.safetensors
+
+https://civitai.com/api/download/models/2455887?type=Model&format=SafeTensor&token=5b71d3f6812d0c5e8858e158d02e99f1 loras/zamateur.safetensors
+

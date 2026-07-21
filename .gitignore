@@ -1,0 +1,36 @@
+# Tokens — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+dist-ssr/
+
+# Dependencies
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# NOTE: data/ directory IS tracked in git (used to seed Vercel/Turso on first deploy)
+# data/model_cache.json is only a local dev fallback; Turso is the production cache
