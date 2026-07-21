@@ -32,13 +32,11 @@ export function TokenSettingsModal({ isOpen, onClose }) {
     if (!isOpen) return;
     setSaved(false);
 
-    // Load from localStorage first (immediate)
+    // Load from localStorage (user UI setting)
     const lsHf = localStorage.getItem(HF_TOKEN_KEY) || '';
     const lsCivitai = localStorage.getItem(CIVITAI_TOKEN_KEY) || '';
-    const envHf = import.meta.env.VITE_HF_TOKEN || '';
-    const envCivitai = import.meta.env.VITE_CIVITAI_TOKEN || '';
-    setHfToken(lsHf || envHf);
-    setCivitaiToken(lsCivitai || envCivitai);
+    setHfToken(lsHf);
+    setCivitaiToken(lsCivitai);
 
     // Then try to load fresher values from backend .env
     setBackendStatus('loading');

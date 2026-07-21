@@ -8,14 +8,11 @@ const HF_TOKEN_KEY = 'simplepod_hf_token';
 const CIVITAI_TOKEN_KEY = 'simplepod_civitai_token';
 
 function getTokens() {
-  // Priority: localStorage (UI-set, instant) > import.meta.env (.env at dev-server start)
-  const lsHf = localStorage.getItem(HF_TOKEN_KEY) || '';
-  const lsCivitai = localStorage.getItem(CIVITAI_TOKEN_KEY) || '';
-  const envHf = import.meta.env.VITE_HF_TOKEN || '';
-  const envCivitai = import.meta.env.VITE_CIVITAI_TOKEN || '';
+  // Read user-provided tokens from localStorage (if set in UI)
+  // Server-side secret tokens (HF_TOKEN / CIVITAI_TOKEN) are applied automatically by /api/* endpoints
   return {
-    hfToken: lsHf || envHf,
-    civitaiToken: lsCivitai || envCivitai,
+    hfToken: localStorage.getItem(HF_TOKEN_KEY) || '',
+    civitaiToken: localStorage.getItem(CIVITAI_TOKEN_KEY) || '',
   };
 }
 
