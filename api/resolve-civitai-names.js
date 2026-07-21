@@ -1,11 +1,12 @@
 /**
  * api/resolve-civitai-names.js — Vercel Serverless Function
- * Resolves filenames for CivitAI, HuggingFace, and direct links.
+ * Resolves filenames for both HuggingFace and CivitAI model download links.
  * Caches resolved names in Supabase.
  */
 import { getDb, upsertCache } from './_db.js';
 
 function getCivitaiToken() { return process.env.CIVITAI_TOKEN || process.env.VITE_CIVITAI_TOKEN || ''; }
+function getHfToken() { return process.env.HF_TOKEN || process.env.VITE_HF_TOKEN || ''; }
 
 function extractPathFilename(url) {
   try {
@@ -33,6 +34,38 @@ async function resolveCivitaiVersion(versionId, token) {
   } catch { return ''; }
 }
 
+async function resolveHfFilename(url, hfToken) {
+  try {
+    const cleanUrl = url.split('?')[0];
+    const parts = cleanUrl.split('/');
+    for (const marker of ['resolve', 'blob', 'raw']) {
+      const idx = parts.indexOf(marker);
+      if (idx > 3) {
+        const repoId = parts.slice(3, idx).join('/');
+        const fname = parts.slice(idx + 2).join('/');
+        const basename = fname.split('/').pop();
+        if (basename && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(basename)) {
+          return decodeURIComponent(basename);
+        }
+
+        // Query HF API if basename wasn't clear
+        const hfH = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
+        if (hfToken) hfH['Authorization'] = `Bearer ${hfToken}`;
+        const r = await fetch(`https://huggingface.co/api/models/${repoId}`, { headers: hfH, signal: AbortSignal.timeout(6000) });
+        if (r.ok) {
+          const data = await r.json();
+          const sib = (data.siblings || []).find(s => s.rfilename === fname || s.rfilename.endsWith(basename));
+          if (sib?.rfilename) {
+            return sib.rfilename.split('/').pop();
+          }
+        }
+        break;
+      }
+    }
+  } catch (_) {}
+  return extractPathFilename(url);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -49,6 +82,7 @@ export default async function handler(req, res) {
     const force = Boolean(body?.force);
 
     const civitaiToken = getCivitaiToken();
+    const hfToken = getHfToken();
     const db = getDb();
     const resolved = {};
 
@@ -63,19 +97,24 @@ export default async function handler(req, res) {
       const url = m.url.trim();
       const name = m.name || '';
       const isDuplicate = nameCounts[name] > 1;
-      const isGeneric = !name || /^\d+$/.test(name) || name.startsWith('civitai_');
+      const isGeneric = !name || /^\d+$/.test(name) || name.startsWith('civitai_') || name.startsWith('model_');
 
       if (!force && !isGeneric && !isDuplicate) continue;
 
       let realName = '';
 
-      // Check CivitAI API version ID
-      const match = url.match(/\/models\/(\d+)/);
-      if (match) {
-        realName = await resolveCivitaiVersion(match[1], civitaiToken);
+      // CivitAI link
+      if (url.includes('civitai.com') || url.includes('civitai.red')) {
+        const match = url.match(/\/models\/(\d+)/);
+        if (match) realName = await resolveCivitaiVersion(match[1], civitaiToken);
       }
 
-      // Check direct URL path filename
+      // HuggingFace link
+      if (!realName && url.includes('huggingface.co')) {
+        realName = await resolveHfFilename(url, hfToken);
+      }
+
+      // Generic URL path fallback
       if (!realName) {
         realName = extractPathFilename(url);
       }
