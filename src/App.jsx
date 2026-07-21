@@ -86,7 +86,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('simplepod_model_overrides');
       if (!saved) return {};
-      if (saved.includes('UTF-8') || saved.includes('utf-8')) {
+      if (saved.includes('UTF-8') || saved.includes('utf-8') || saved.includes('Lenovo') || saved.includes('Amateur')) {
         localStorage.removeItem('simplepod_model_overrides');
         return {};
       }

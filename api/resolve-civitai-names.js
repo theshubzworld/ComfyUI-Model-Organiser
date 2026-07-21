@@ -96,8 +96,12 @@ export default async function handler(req, res) {
       if (!m || !m.url) continue;
       const url = m.url.trim();
       const name = m.name || '';
-      const isDuplicate = nameCounts[name] > 1;
-      const isGeneric = !name || /^\d+$/.test(name) || name.startsWith('civitai_') || name.startsWith('model_');
+      const isGeneric = !name || 
+        /^\d+$/.test(name) || 
+        name.startsWith('civitai_') || 
+        name.startsWith('model_') || 
+        name.toLowerCase().includes('lenovo') || 
+        name.toLowerCase().includes('amateur');
 
       if (!force && !isGeneric && !isDuplicate) continue;
 

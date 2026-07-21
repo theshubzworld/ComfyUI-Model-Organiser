@@ -924,8 +924,9 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                         if not url or ("civitai.com" not in url and "civitai.red" not in url):
                             continue
                         
-                        # Needs resolution if name is missing, numeric ID, or starts with civitai_
-                        if not name or re.match(r'^\d+$', str(name)) or str(name).startswith('civitai_'):
+                        force = bool(data.get("force"))
+                        is_generic = not name or re.match(r'^\d+$', str(name)) or str(name).startswith('civitai_') or 'lenovo' in str(name).lower() or 'amateur' in str(name).lower()
+                        if force or is_generic:
                             vid_match = re.search(r'/models/(\d+)', url)
                             if vid_match:
                                 version_id = vid_match.group(1)
