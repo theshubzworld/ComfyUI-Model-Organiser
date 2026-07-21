@@ -398,7 +398,16 @@ export default function App() {
       const timer = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), TIMEOUT_MS));
       try {
         const sizeResult = await Promise.race([fetchRemoteFileSize(model.url), timer]);
-        if (sizeResult && sizeResult !== 'Unknown') {
+        if (sizeResult && typeof sizeResult === 'object') {
+          const updates = {};
+          if (sizeResult.size && sizeResult.size !== 'Unknown') updates.size = sizeResult.size;
+          if (sizeResult.name && (!model.name || /^\d+$/.test(model.name) || model.name.startsWith('civitai_'))) {
+            updates.name = sizeResult.name;
+          }
+          if (Object.keys(updates).length > 0) {
+            freshUpdates[model.id] = updates;
+          }
+        } else if (sizeResult && sizeResult !== 'Unknown') {
           freshUpdates[model.id] = { size: sizeResult };
         }
       } catch (e) {

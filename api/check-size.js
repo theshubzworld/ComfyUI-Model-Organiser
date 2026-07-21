@@ -1,6 +1,6 @@
 /**
  * api/check-size.js — Vercel Serverless Function
- * Server-side file size checker. Tries HEAD → Range → CivitAI API → HF API.
+ * Server-side file size & filename checker. Tries HEAD → Range → CivitAI API → HF API.
  * Saves results to Supabase model_cache.
  */
 import { getDb, upsertCache } from './_db.js';
@@ -11,6 +11,17 @@ function getHfToken() { return process.env.HF_TOKEN || process.env.VITE_HF_TOKEN
 function bytesToHuman(bytes) {
   const mb = bytes / (1024 * 1024);
   return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+}
+
+function extractFilenameFromUrl(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split('/').pop();
+    if (filename && (filename.endsWith('.safetensors') || filename.endsWith('.ckpt') || filename.endsWith('.pt') || filename.endsWith('.bin') || filename.endsWith('.gguf') || filename.endsWith('.onnx') || filename.endsWith('.pth'))) {
+      return decodeURIComponent(filename);
+    }
+  } catch (_) {}
+  return '';
 }
 
 export default async function handler(req, res) {
@@ -28,7 +39,7 @@ export default async function handler(req, res) {
     }
     const { url, hfToken: clientHf, civitaiToken: clientCivitai } = body || {};
     requestUrl = url || '';
-    if (!requestUrl) return res.status(200).json({ url: '', size: 'Unknown' });
+    if (!requestUrl) return res.status(200).json({ url: '', size: 'Unknown', name: '' });
 
     const hfToken = clientHf || getHfToken();
     const civitaiToken = clientCivitai || getCivitaiToken();
@@ -45,12 +56,19 @@ export default async function handler(req, res) {
     }
 
     let sizeStr = 'Unknown';
+    let resolvedName = extractFilenameFromUrl(requestUrl);
 
-    // Method A: HEAD request
+    // Method A: HEAD request (checks Content-Length & Content-Disposition header)
     try {
       const r = await fetch(fetchUrl, { method: 'HEAD', headers: baseHeaders, redirect: 'follow', signal: AbortSignal.timeout(6000) });
       const cl = r.headers.get('content-length');
       if (cl) sizeStr = bytesToHuman(parseInt(cl, 10));
+
+      const cd = r.headers.get('content-disposition');
+      if (cd) {
+        const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+      }
     } catch (_) {}
 
     // Method B: Range request fallback
@@ -62,11 +80,16 @@ export default async function handler(req, res) {
           const total = parseInt(cr.split('/').pop(), 10);
           if (total > 0) sizeStr = bytesToHuman(total);
         }
+        const cd = r.headers.get('content-disposition');
+        if (cd) {
+          const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+        }
       } catch (_) {}
     }
 
     // Method C: CivitAI Model Version API
-    if (sizeStr === 'Unknown' && (requestUrl.includes('civitai.com') || requestUrl.includes('civitai.red'))) {
+    if ((sizeStr === 'Unknown' || !resolvedName) && (requestUrl.includes('civitai.com') || requestUrl.includes('civitai.red'))) {
       try {
         const match = requestUrl.match(/\/models\/(\d+)/);
         if (match) {
@@ -76,9 +99,12 @@ export default async function handler(req, res) {
           if (r.ok) {
             const data = await r.json();
             const primary = (data.files || []).find(f => f.primary) || data.files?.[0];
-            if (primary?.sizeKB) {
-              const mb = primary.sizeKB / 1024;
-              sizeStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+            if (primary) {
+              if (primary.sizeKB && sizeStr === 'Unknown') {
+                const mb = primary.sizeKB / 1024;
+                sizeStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+              }
+              if (primary.name && !resolvedName) resolvedName = primary.name;
             }
           }
         }
@@ -86,7 +112,7 @@ export default async function handler(req, res) {
     }
 
     // Method D: HuggingFace API
-    if (sizeStr === 'Unknown' && requestUrl.includes('huggingface.co')) {
+    if ((sizeStr === 'Unknown' || !resolvedName) && requestUrl.includes('huggingface.co')) {
       try {
         const parts = requestUrl.split('?')[0].split('/');
         for (const marker of ['resolve', 'blob', 'raw']) {
@@ -100,9 +126,12 @@ export default async function handler(req, res) {
             if (r.ok) {
               const data = await r.json();
               const sib = (data.siblings || []).find(s => s.rfilename === fname);
-              if (sib?.size) {
-                const mb = sib.size / (1024 * 1024);
-                sizeStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+              if (sib) {
+                if (sib.size && sizeStr === 'Unknown') {
+                  const mb = sib.size / (1024 * 1024);
+                  sizeStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+                }
+                if (sib.rfilename && !resolvedName) resolvedName = sib.rfilename;
               }
             }
             break;
@@ -111,13 +140,13 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    // Cache result if size was found
-    if (sizeStr !== 'Unknown') {
-      await upsertCache(getDb(), requestUrl, { size: sizeStr }).catch(() => {});
+    // Cache results in Supabase
+    if (sizeStr !== 'Unknown' || resolvedName) {
+      await upsertCache(getDb(), requestUrl, { size: sizeStr !== 'Unknown' ? sizeStr : undefined, name: resolvedName || undefined }).catch(() => {});
     }
 
-    return res.status(200).json({ url: requestUrl, size: sizeStr });
+    return res.status(200).json({ url: requestUrl, size: sizeStr, name: resolvedName });
   } catch (err) {
-    return res.status(200).json({ url: requestUrl, size: 'Unknown', error: err.message });
+    return res.status(200).json({ url: requestUrl, size: 'Unknown', name: '', error: err.message });
   }
 }

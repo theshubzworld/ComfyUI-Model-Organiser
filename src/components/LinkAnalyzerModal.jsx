@@ -15,10 +15,19 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
     setAnalyzing(true);
     setErrorMsg('');
     try {
+      let targetModels = modelsList && modelsList.length > 0 ? modelsList : [];
+      if (!targetModels.length) {
+        const catRes = await fetch('/api/load-model-list').catch(() => null);
+        if (catRes && catRes.ok) {
+          const catData = await catRes.json();
+          targetModels = catData.models || [];
+        }
+      }
+
       const res = await fetch('/api/analyze-links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ models: modelsList })
+        body: JSON.stringify({ models: targetModels })
       });
       if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
       const data = await res.json();

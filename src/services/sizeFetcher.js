@@ -135,13 +135,15 @@ export async function fetchRemoteFileSize(url) {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.size && data.size !== 'Unknown') return data.size;
+      if ((data.size && data.size !== 'Unknown') || data.name) {
+        return { size: data.size || 'Unknown', name: data.name || '' };
+      }
     }
   } catch (e) {
     // Ignore if backend not running
   }
 
-  return 'Unknown';
+  return { size: 'Unknown', name: '' };
 }
 
 /**
