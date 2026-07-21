@@ -67,7 +67,7 @@ export default async function handler(req, res) {
       const cd = r.headers.get('content-disposition');
       if (cd) {
         const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (fnMatch) resolvedName = cleanName(fnMatch[1]);
+        if (fnMatch) resolvedName = cleanName(fnMatch[1], requestUrl);
       }
     } catch (_) {}
 
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
         const cd = r.headers.get('content-disposition');
         if (cd) {
           const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (fnMatch) resolvedName = cleanName(fnMatch[1]);
+          if (fnMatch) resolvedName = cleanName(fnMatch[1], requestUrl);
         }
       } catch (_) {}
     }

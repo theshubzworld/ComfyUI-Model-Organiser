@@ -74,7 +74,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('simplepod_civitai_models');
       if (!saved) return [];
-      if (saved.includes('UTF-8') || saved.includes('utf-8')) {
+      if (saved.includes('UTF-8') || saved.includes('utf-8') || saved.includes('Lenovo') || saved.includes('Amateur')) {
         localStorage.removeItem('simplepod_civitai_models');
         return [];
       }
@@ -192,9 +192,27 @@ export default function App() {
         if (!fetched.length) return;
 
         setCivitaiModels(prev => {
-          const existingUrls = new Set(prev.map(m => m.url).filter(Boolean));
-          const newMasterModels = fetched.filter(m => m.url && !existingUrls.has(m.url));
-          const merged = prev.length === 0 ? fetched : [...prev, ...newMasterModels];
+          const isStaleName = (n) => !n || n.toLowerCase().includes('lenovo') || n.toLowerCase().includes('amateur') || /^\d+$/.test(n) || n.startsWith('civitai_');
+          const mergedMap = new Map();
+          fetched.forEach(m => {
+            if (m.url) mergedMap.set(m.url.toLowerCase(), m);
+          });
+          prev.forEach(m => {
+            if (!m.url) return;
+            const key = m.url.toLowerCase();
+            const existing = mergedMap.get(key);
+            if (!existing) {
+              mergedMap.set(key, m);
+            } else {
+              if (isStaleName(existing.name) && !isStaleName(m.name)) {
+                existing.name = m.name;
+              }
+              if ((!existing.size || existing.size === 'Unknown') && m.size && m.size !== 'Unknown') {
+                existing.size = m.size;
+              }
+            }
+          });
+          const merged = Array.from(mergedMap.values());
           try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(merged)); } catch {}
           console.log(`[model-list] Auto-loaded ${merged.length} models from backend`);
           return merged;
@@ -477,7 +495,8 @@ export default function App() {
         if (sizeResult && typeof sizeResult === 'object') {
           const updates = {};
           if (sizeResult.size && sizeResult.size !== 'Unknown') updates.size = sizeResult.size;
-          if (sizeResult.name && (!model.name || /^\d+$/.test(model.name) || model.name.startsWith('civitai_'))) {
+          const isStaleName = (n) => !n || n.toLowerCase().includes('lenovo') || n.toLowerCase().includes('amateur') || /^\d+$/.test(n) || n.startsWith('civitai_');
+          if (sizeResult.name && (isStaleName(model.name) || model.name === 'model.safetensors')) {
             updates.name = sizeResult.name;
           }
           if (Object.keys(updates).length > 0) {
