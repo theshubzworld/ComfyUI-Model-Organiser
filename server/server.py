@@ -1043,6 +1043,73 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_json(500, {"error": str(e)})
 
+        # ── /api/analyze-links ───────────────────────────────────────────────
+        elif self.path.startswith("/api/analyze-links"):
+            try:
+                data = json.loads(post_data)
+                models = data.get("models", [])
+                master_models = parse_model_list_txt(MODEL_LIST_TXT)
+                issues = []
+                valid_count = 0
+                total_audited = len(models)
+
+                for m in models:
+                    mid = m.get("id") or m.get("name") or ""
+                    mname = m.get("name", "Unnamed Model")
+                    mfolder = (m.get("folder") or "checkpoints").replace("models/", "")
+                    murl = (m.get("url") or "").strip()
+
+                    if not murl:
+                        clean_name = mname.lower().replace(".safetensors", "").replace(".ckpt", "")
+                        match = next((cat for cat in master_models if cat.get("url") and not cat["url"].startswith("http") and clean_name in cat.get("name", "").lower()), None)
+                        issues.append({
+                            "id": mid,
+                            "name": mname,
+                            "folder": mfolder,
+                            "type": "missing",
+                            "currentUrl": "",
+                            "suggestedUrl": match.get("url", "") if match else "",
+                            "suggestedSize": match.get("size", "") if match else "",
+                            "confidence": "High" if match else "Low",
+                        })
+                    elif "/search?q=" in murl:
+                        search_query = murl.split("?q=")[-1] if "?q=" in murl else mname
+                        term = search_query.lower()
+                        match = next((cat for cat in master_models if cat.get("url") and "search?q=" not in cat["url"] and term in cat["url"].lower()), None)
+                        issues.append({
+                            "id": mid,
+                            "name": mname,
+                            "folder": mfolder,
+                            "type": "search",
+                            "currentUrl": murl,
+                            "suggestedUrl": match.get("url", "") if match else "",
+                            "suggestedSize": match.get("size", "") if match else "",
+                            "confidence": "High" if match else "Medium",
+                        })
+                    elif murl.startswith("http"):
+                        valid_count += 1
+                    else:
+                        issues.append({
+                            "id": mid,
+                            "name": mname,
+                            "folder": mfolder,
+                            "type": "broken",
+                            "currentUrl": murl,
+                            "suggestedUrl": "",
+                            "suggestedSize": "",
+                            "confidence": "Low",
+                        })
+
+                health_score = round((valid_count / total_audited) * 100) if total_audited > 0 else 100
+                self.send_json(200, {
+                    "healthScore": health_score,
+                    "validCount": valid_count,
+                    "totalAudited": total_audited,
+                    "issues": issues,
+                })
+            except Exception as e:
+                self.send_json(500, {"error": str(e)})
+
         # ── /api/save-models ──────────────────────────────────────────────────
         elif self.path.startswith("/api/save-models"):
             try:

@@ -1,8 +1,16 @@
 /**
  * api/analyze-links.js — Vercel Serverless Function
- * Analyzes a batch of URLs for size/filename. Caches results in Supabase.
+ * Audits model download links, identifies missing/search placeholders,
+ * matches direct links against Supabase DB & master-model-list.txt,
+ * and returns full health audit report with auto-fix suggestions.
  */
-import { getDb, upsertCache } from './_db.js';
+import { getDb, upsertCache, cleanUrl } from './_db.js';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const MASTER_LIST = join(__dirname, '..', 'data', 'master-model-list.txt');
 
 function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
 function getHfToken() { return process.env.VITE_HF_TOKEN || process.env.HF_TOKEN || ''; }
@@ -12,52 +20,22 @@ function bytesToHuman(bytes) {
   return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
 }
 
-async function analyzeUrl(rawUrl) {
-  const hfToken = getHfToken();
-  const civitaiToken = getCivitaiToken();
-  let url = rawUrl.trim();
-  if (!url.startsWith('http')) return { url, name: '', size: 'Unknown', error: 'Invalid URL' };
-
-  if (civitaiToken && (url.includes('civitai.com') || url.includes('civitai.red')) && !url.includes('token=')) {
-    url += (url.includes('?') ? '&' : '?') + `token=${civitaiToken}`;
+function parseMasterFile() {
+  if (!existsSync(MASTER_LIST)) return [];
+  const lines = readFileSync(MASTER_LIST, 'utf-8').split('\n');
+  const items = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const parts = line.split(/\s+/);
+    if (parts.length >= 2 && parts[0].startsWith('http')) {
+      const url = parts[0];
+      const folder = (parts[1] || 'checkpoints').replace(/^models\//i, '');
+      const name = parts[2] || '';
+      items.push({ url, folder, name });
+    }
   }
-
-  const headers = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
-  if (hfToken && url.includes('huggingface.co')) headers['Authorization'] = `Bearer ${hfToken}`;
-  if (civitaiToken && (url.includes('civitai.com') || url.includes('civitai.red'))) headers['Authorization'] = `Bearer ${civitaiToken}`;
-
-  let size = 'Unknown', name = '';
-  const platform = url.includes('civitai.com') || url.includes('civitai.red') ? 'civitai'
-    : url.includes('huggingface.co') ? 'huggingface' : 'direct';
-
-  try {
-    const r = await fetch(url, { method: 'HEAD', headers, redirect: 'follow', signal: AbortSignal.timeout(8000) });
-    const cl = r.headers.get('content-length');
-    if (cl) size = bytesToHuman(parseInt(cl, 10));
-    const cd = r.headers.get('content-disposition');
-    if (cd) { const m = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/); if (m) name = m[1].replace(/['"]/g, '').trim(); }
-  } catch (_) {}
-
-  if (size === 'Unknown' && platform === 'civitai') {
-    try {
-      const match = url.match(/\/models\/(\d+)/);
-      if (match) {
-        let apiUrl = `https://civitai.com/api/v1/model-versions/${match[1]}`;
-        if (civitaiToken) apiUrl += `?token=${civitaiToken}`;
-        const r = await fetch(apiUrl, { headers, signal: AbortSignal.timeout(8000) });
-        if (r.ok) {
-          const data = await r.json();
-          const primary = (data.files || []).find(f => f.primary) || data.files?.[0];
-          if (primary) {
-            if (primary.sizeKB) { const mb = primary.sizeKB / 1024; size = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`; }
-            if (primary.name) name = primary.name;
-          }
-        }
-      }
-    } catch (_) {}
-  }
-
-  return { url: rawUrl, name, size, platform };
+  return items;
 }
 
 export default async function handler(req, res) {
@@ -67,21 +45,181 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  try {
     let body = req.body;
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (_) {}
     }
-    const rawUrls = Array.isArray(body?.urls) ? body.urls : Array.isArray(body?.models) ? body.models : Array.isArray(body) ? body : [];
+
+    const rawModels = Array.isArray(body?.models) ? body.models : Array.isArray(body?.urls) ? body.urls : Array.isArray(body) ? body : [];
+
+    if (!rawModels.length) {
+      return res.status(200).json({
+        healthScore: 100,
+        validCount: 0,
+        totalAudited: 0,
+        issues: [],
+      });
+    }
+
+    // Load master reference items
+    const masterItems = parseMasterFile();
     const db = getDb();
-    const results = await Promise.all(rawUrls.map(analyzeUrl));
-    for (const r of results) {
-      if (r.size !== 'Unknown' || r.name) {
-        await upsertCache(db, r.url, { size: r.size, name: r.name }).catch(() => {});
+
+    // Fetch DB models & cache entries for lookup
+    let dbModels = [];
+    let cacheMap = {};
+    if (db) {
+      const { data: mData } = await db.from('model_list').select('url, name, folder, size').catch(() => ({ data: [] }));
+      if (mData) dbModels = mData;
+
+      const { data: cData } = await db.from('model_cache').select('clean_url, name, size').catch(() => ({ data: [] }));
+      if (cData) {
+        cData.forEach(c => { if (c.clean_url) cacheMap[c.clean_url] = c; });
       }
     }
-    return res.status(200).json({ results, count: results.length });
+
+    // Combine master catalog reference
+    const catalog = [...dbModels, ...masterItems];
+
+    const issues = [];
+    let validCount = 0;
+    const totalAudited = rawModels.length;
+
+    for (const m of rawModels) {
+      const id = m.id || m.name || String(Math.random());
+      const name = m.name || 'Unnamed Model';
+      const folder = (m.folder || 'checkpoints').replace(/^models\//i, '');
+      const rawUrl = (m.url || '').trim();
+
+      // Case 1: Missing URL completely
+      if (!rawUrl) {
+        // Try to match in catalog by name/folder
+        const cleanName = name.toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
+        const match = catalog.find(cat => {
+          if (!cat.url || cat.url.includes('/search?q=')) return false;
+          const catName = (cat.name || '').toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
+          return catName && (cleanName.includes(catName) || catName.includes(cleanName));
+        });
+
+        issues.push({
+          id,
+          name,
+          folder,
+          type: 'missing',
+          currentUrl: '',
+          suggestedUrl: match?.url || '',
+          suggestedSize: match?.size || '',
+          confidence: match ? 'High' : 'Low',
+        });
+        continue;
+      }
+
+      // Case 2: Search URL placeholder (e.g. https://huggingface.co/search?q=...)
+      if (rawUrl.includes('/search?q=')) {
+        let searchQuery = '';
+        try {
+          const u = new URL(rawUrl);
+          searchQuery = u.searchParams.get('q') || '';
+        } catch (_) {}
+
+        const targetTerm = (searchQuery || name).toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
+        const match = catalog.find(cat => {
+          if (!cat.url || cat.url.includes('/search?q=')) return false;
+          const catUrl = cat.url.toLowerCase();
+          const catName = (cat.name || '').toLowerCase();
+          return catUrl.includes(targetTerm) || catName.includes(targetTerm);
+        });
+
+        issues.push({
+          id,
+          name,
+          folder,
+          type: 'search',
+          currentUrl: rawUrl,
+          suggestedUrl: match?.url || '',
+          suggestedSize: match?.size || '',
+          confidence: match ? 'High' : 'Medium',
+        });
+        continue;
+      }
+
+      // Case 3: Direct Download URL (http...)
+      if (rawUrl.startsWith('http')) {
+        // Check if size or name is missing/placeholder
+        const cached = cacheMap[cleanUrl(rawUrl)];
+        const effectiveSize = cached?.size || m.size || '';
+        const effectiveName = cached?.name || m.name || '';
+
+        const isNamePlaceholder = !effectiveName || /^\d+$/.test(effectiveName) || effectiveName.startsWith('civitai_');
+        const isSizeUnknown = !effectiveSize || effectiveSize === 'Unknown';
+
+        if (isNamePlaceholder || isSizeUnknown) {
+          // Perform quick server-side check to resolve name/size
+          let resolvedSize = effectiveSize;
+          let resolvedName = effectiveName;
+
+          try {
+            const civitaiToken = getCivitaiToken();
+            const hfToken = getHfToken();
+            let fetchUrl = rawUrl;
+            if (civitaiToken && (rawUrl.includes('civitai.com') || rawUrl.includes('civitai.red')) && !rawUrl.includes('token=')) {
+              fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + `token=${civitaiToken}`;
+            }
+
+            const headers = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
+            if (hfToken && fetchUrl.includes('huggingface.co')) headers['Authorization'] = `Bearer ${hfToken}`;
+
+            const r = await fetch(fetchUrl, { method: 'HEAD', headers, redirect: 'follow', signal: AbortSignal.timeout(5000) });
+            if (r.ok) {
+              const cl = r.headers.get('content-length');
+              if (cl && isSizeUnknown) resolvedSize = bytesToHuman(parseInt(cl, 10));
+              const cd = r.headers.get('content-disposition');
+              if (cd) {
+                const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+              }
+            }
+          } catch (_) {}
+
+          // Cache any newly resolved attributes
+          if ((resolvedSize && resolvedSize !== 'Unknown') || resolvedName) {
+            await upsertCache(db, rawUrl, { size: resolvedSize, name: resolvedName }).catch(() => {});
+          }
+        }
+
+        validCount++;
+      } else {
+        // Invalid protocol URL
+        issues.push({
+          id,
+          name,
+          folder,
+          type: 'broken',
+          currentUrl: rawUrl,
+          suggestedUrl: '',
+          suggestedSize: '',
+          confidence: 'Low',
+        });
+      }
+    }
+
+    const healthScore = totalAudited > 0 ? Math.round((validCount / totalAudited) * 100) : 100;
+
+    return res.status(200).json({
+      healthScore,
+      validCount,
+      totalAudited,
+      issues,
+    });
   } catch (err) {
     console.error('[analyze-links] Error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({
+      healthScore: 0,
+      validCount: 0,
+      totalAudited: 0,
+      issues: [],
+      error: err.message,
+    });
   }
 }
