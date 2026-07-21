@@ -2,9 +2,9 @@
  * api/analyze-links.js — Vercel Serverless Function
  * Audits model download links, identifies missing/search placeholders,
  * matches direct links against Supabase DB & master-model-list.txt,
- * and returns full health audit report with auto-fix suggestions.
+ * and returns full health audit report with issue category filters.
  */
-import { getDb, upsertCache, cleanUrl } from './_db.js';
+import { getDb, upsertCache, cleanUrl, cleanName } from './_db.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -12,8 +12,8 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MASTER_LIST = join(__dirname, '..', 'data', 'master-model-list.txt');
 
-function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
-function getHfToken() { return process.env.VITE_HF_TOKEN || process.env.HF_TOKEN || ''; }
+function getCivitaiToken() { return process.env.CIVITAI_TOKEN || process.env.VITE_CIVITAI_TOKEN || ''; }
+function getHfToken() { return process.env.HF_TOKEN || process.env.VITE_HF_TOKEN || ''; }
 
 function bytesToHuman(bytes) {
   const mb = bytes / (1024 * 1024);
@@ -88,18 +88,17 @@ export default async function handler(req, res) {
 
     for (const m of rawModels) {
       const id = m.id || m.name || String(Math.random());
-      const name = m.name || 'Unnamed Model';
+      const name = cleanName(m.name, m.url) || 'Unnamed Model';
       const folder = (m.folder || 'checkpoints').replace(/^models\//i, '');
       const rawUrl = (m.url || '').trim();
 
       // Case 1: Missing URL completely
       if (!rawUrl) {
-        // Try to match in catalog by name/folder
-        const cleanName = name.toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
+        const cleanN = name.toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
         const match = catalog.find(cat => {
           if (!cat.url || cat.url.includes('/search?q=')) return false;
           const catName = (cat.name || '').toLowerCase().replace(/\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i, '');
-          return catName && (cleanName.includes(catName) || catName.includes(cleanName));
+          return catName && (cleanN.includes(catName) || catName.includes(cleanN));
         });
 
         issues.push({
@@ -110,6 +109,7 @@ export default async function handler(req, res) {
           currentUrl: '',
           suggestedUrl: match?.url || '',
           suggestedSize: match?.size || '',
+          suggestedName: match?.name || '',
           confidence: match ? 'High' : 'Low',
         });
         continue;
@@ -139,6 +139,7 @@ export default async function handler(req, res) {
           currentUrl: rawUrl,
           suggestedUrl: match?.url || '',
           suggestedSize: match?.size || '',
+          suggestedName: match?.name || '',
           confidence: match ? 'High' : 'Medium',
         });
         continue;
@@ -146,49 +147,47 @@ export default async function handler(req, res) {
 
       // Case 3: Direct Download URL (http...)
       if (rawUrl.startsWith('http')) {
-        // Check if size or name is missing/placeholder
+        validCount++;
+
         const cached = cacheMap[cleanUrl(rawUrl)];
         const effectiveSize = cached?.size || m.size || '';
-        const effectiveName = cached?.name || m.name || '';
+        const effectiveName = cleanName(cached?.name || m.name, rawUrl) || '';
 
-        const isNamePlaceholder = !effectiveName || /^\d+$/.test(effectiveName) || effectiveName.startsWith('civitai_');
+        const isNamePlaceholder = !effectiveName || /^\d+$/.test(effectiveName) || effectiveName.startsWith('civitai_') || effectiveName.startsWith('UTF');
         const isSizeUnknown = !effectiveSize || effectiveSize === 'Unknown';
 
         if (isNamePlaceholder || isSizeUnknown) {
-          // Perform quick server-side check to resolve name/size
           let resolvedSize = effectiveSize;
           let resolvedName = effectiveName;
 
-          try {
-            const civitaiToken = getCivitaiToken();
-            const hfToken = getHfToken();
-            let fetchUrl = rawUrl;
-            if (civitaiToken && (rawUrl.includes('civitai.com') || rawUrl.includes('civitai.red')) && !rawUrl.includes('token=')) {
-              fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + `token=${civitaiToken}`;
-            }
-
-            const headers = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
-            if (hfToken && fetchUrl.includes('huggingface.co')) headers['Authorization'] = `Bearer ${hfToken}`;
-
-            const r = await fetch(fetchUrl, { method: 'HEAD', headers, redirect: 'follow', signal: AbortSignal.timeout(5000) });
-            if (r.ok) {
-              const cl = r.headers.get('content-length');
-              if (cl && isSizeUnknown) resolvedSize = bytesToHuman(parseInt(cl, 10));
-              const cd = r.headers.get('content-disposition');
-              if (cd) {
-                const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+          if (rawUrl.includes('huggingface.co')) {
+            try {
+              const pathname = new URL(rawUrl).pathname;
+              const lastPart = pathname.split('/').filter(Boolean).pop();
+              if (lastPart && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(lastPart)) {
+                resolvedName = decodeURIComponent(lastPart);
               }
-            }
-          } catch (_) {}
+            } catch (_) {}
+          }
 
-          // Cache any newly resolved attributes
-          if ((resolvedSize && resolvedSize !== 'Unknown') || resolvedName) {
+          if (isNamePlaceholder && resolvedName && resolvedName !== effectiveName) {
             await upsertCache(db, rawUrl, { size: resolvedSize, name: resolvedName }).catch(() => {});
           }
-        }
 
-        validCount++;
+          if (isNamePlaceholder || isSizeUnknown) {
+            issues.push({
+              id,
+              name: resolvedName || name,
+              folder,
+              type: isNamePlaceholder ? 'name' : 'size',
+              currentUrl: rawUrl,
+              suggestedUrl: rawUrl,
+              suggestedSize: resolvedSize !== 'Unknown' ? resolvedSize : '',
+              suggestedName: resolvedName || '',
+              confidence: 'High',
+            });
+          }
+        }
       } else {
         // Invalid protocol URL
         issues.push({
@@ -199,6 +198,7 @@ export default async function handler(req, res) {
           currentUrl: rawUrl,
           suggestedUrl: '',
           suggestedSize: '',
+          suggestedName: '',
           confidence: 'Low',
         });
       }
