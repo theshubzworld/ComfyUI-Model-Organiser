@@ -1168,8 +1168,8 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = HTTPServer(("localhost", PORT), SizeCheckerHandler)
-    print(f"SimplePod Backend Server running on http://localhost:{PORT}")
+    server = HTTPServer(("0.0.0.0", PORT), SizeCheckerHandler)
+    print(f"SimplePod Backend Server running on http://127.0.0.1:{PORT}")
     print(f"  -> GET  /api/get-tokens    -- read tokens from .env")
     print(f"  -> POST /api/save-tokens   -- write tokens to .env")
     print(f"  -> POST /api/check-size    -- proxy size fetch with auth")
