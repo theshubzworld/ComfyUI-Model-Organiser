@@ -820,6 +820,7 @@ export default function App() {
         modelsList={activeModelsFiltered}
         onUpdateModel={handleUpdateModel}
         onBulkUpdateModels={handleBulkUpdateModels}
+        onRemoveModel={handleRemoveModel}
       />
 
     </div>

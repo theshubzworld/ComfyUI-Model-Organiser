@@ -1,8 +1,7 @@
 /**
  * api/analyze-links.js — Vercel Serverless Function
- * Audits model download links, identifies missing/search placeholders,
- * matches direct links against Supabase DB & master-model-list.txt,
- * and returns full health audit report with issue category filters.
+ * Audits model download links, detects missing links, search placeholders,
+ * duplicate URLs, and stale/wrong cached filenames on different URLs.
  */
 import { getDb, upsertCache, cleanUrl, cleanName } from './_db.js';
 import { readFileSync, existsSync } from 'fs';
@@ -79,14 +78,100 @@ export default async function handler(req, res) {
       }
     }
 
-    // Combine master catalog reference
     const catalog = [...dbModels, ...masterItems];
-
     const issues = [];
     let validCount = 0;
     const totalAudited = rawModels.length;
 
+    // 1. Detect Duplicate Filenames with DIFFERENT URLs (Stale Cached Names)
+    const nameMap = new Map();
+    const urlMap = new Map();
+    const flaggedIds = new Set();
+
+    rawModels.forEach(m => {
+      const cleanN = cleanName(m.name, m.url).toLowerCase();
+      const cleanU = (m.url || '').trim().toLowerCase();
+      if (cleanN && !['unnamed model', 'model.safetensors'].includes(cleanN)) {
+        const list = nameMap.get(cleanN) || [];
+        list.push({ ...m, cleanUrl: cleanU });
+        nameMap.set(cleanN, list);
+      }
+      if (cleanU) {
+        const list = urlMap.get(cleanU) || [];
+        list.push(m);
+        urlMap.set(cleanU, list);
+      }
+    });
+
+    // Check for Stale Cached Name Mismatches (Same Name, Different URLs)
+    nameMap.forEach((modelsWithName, lowerName) => {
+      if (modelsWithName.length > 1) {
+        const distinctUrls = new Set(modelsWithName.map(m => m.cleanUrl).filter(Boolean));
+        if (distinctUrls.size > 1) {
+          modelsWithName.forEach(m => {
+            if (!m.cleanUrl || flaggedIds.has(m.id)) return;
+            flaggedIds.add(m.id);
+
+            let trueName = '';
+            if (m.cleanUrl.includes('huggingface.co')) {
+              try {
+                const parts = new URL(m.cleanUrl).pathname.split('/').filter(Boolean);
+                const last = parts.pop();
+                if (last && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(last)) {
+                  trueName = decodeURIComponent(last);
+                }
+              } catch (_) {}
+            }
+
+            const cached = cacheMap[cleanUrl(m.cleanUrl)];
+            if (cached?.name && cached.name.toLowerCase() !== lowerName) {
+              trueName = cached.name;
+            }
+
+            issues.push({
+              id: m.id,
+              name: m.name,
+              folder: (m.folder || 'checkpoints').replace(/^models\//i, ''),
+              type: 'stale_name',
+              currentUrl: m.url,
+              suggestedUrl: m.url,
+              suggestedSize: m.size || '',
+              suggestedName: trueName || '',
+              confidence: 'High',
+              note: 'Same name found on different URLs — past caching mismatch',
+            });
+          });
+        }
+      }
+    });
+
+    // Check for Exact Duplicate Links
+    urlMap.forEach((modelsWithUrl, lowerUrl) => {
+      if (modelsWithUrl.length > 1) {
+        modelsWithUrl.slice(1).forEach(m => {
+          if (flaggedIds.has(m.id)) return;
+          flaggedIds.add(m.id);
+
+          issues.push({
+            id: m.id,
+            name: m.name,
+            folder: (m.folder || 'checkpoints').replace(/^models\//i, ''),
+            type: 'duplicate_link',
+            currentUrl: m.url,
+            suggestedUrl: '',
+            suggestedSize: '',
+            suggestedName: '',
+            confidence: 'High',
+            note: 'Duplicate link entry in table',
+          });
+        });
+      }
+    });
+
+    // Main audit pass for missing, search, broken, and unknown sizes
     for (const m of rawModels) {
+      if (flaggedIds.has(m.id)) continue;
+
       const id = m.id || m.name || String(Math.random());
       const name = cleanName(m.name, m.url) || 'Unnamed Model';
       const folder = (m.folder || 'checkpoints').replace(/^models\//i, '');
@@ -115,7 +200,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // Case 2: Search URL placeholder (e.g. https://huggingface.co/search?q=...)
+      // Case 2: Search URL placeholder
       if (rawUrl.includes('/search?q=')) {
         let searchQuery = '';
         try {
@@ -189,7 +274,6 @@ export default async function handler(req, res) {
           }
         }
       } else {
-        // Invalid protocol URL
         issues.push({
           id,
           name,
