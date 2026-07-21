@@ -178,7 +178,7 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 2. Auto-load all 368 master links from model-list.txt (models.txt)
+    // 2. Auto-load all master links from /api/load-model-list
     fetch('/api/load-model-list')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
@@ -186,13 +186,11 @@ export default function App() {
         if (!fetched.length) return;
 
         setCivitaiModels(prev => {
-          const existingUrls = new Set(prev.map(m => m.url));
-          const newMasterModels = fetched.filter(m => !existingUrls.has(m.url));
-          if (!newMasterModels.length) return prev;
-
-          const merged = [...prev, ...newMasterModels];
+          const existingUrls = new Set(prev.map(m => m.url).filter(Boolean));
+          const newMasterModels = fetched.filter(m => m.url && !existingUrls.has(m.url));
+          const merged = prev.length === 0 ? fetched : [...prev, ...newMasterModels];
           try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(merged)); } catch {}
-          console.log(`[model-list] Auto-loaded ${newMasterModels.length} models from model-list.txt`);
+          console.log(`[model-list] Auto-loaded ${merged.length} models from backend`);
           return merged;
         });
       })
@@ -210,11 +208,13 @@ export default function App() {
     
     selectedWfs.forEach(wf => {
       (wf.models || []).forEach(m => {
-        const key = (m.name || m.filename).toLowerCase();
-        if (!modelsMap.has(key)) {
+        const nameKey = (m.name || m.filename || '').toLowerCase();
+        const urlKey = (m.url || '').toLowerCase();
+        const key = urlKey || nameKey || m.id;
+        if (key && !modelsMap.has(key)) {
           modelsMap.set(key, {
             id: 'm_' + key,
-            name: m.name || m.filename,
+            name: m.name || m.filename || '',
             folder: normalizeModelFolder(m.folder),
             url: m.url || '',
             size: m.size || 'Unknown',
@@ -225,18 +225,28 @@ export default function App() {
       });
     });
 
-    // Merge civitai models — only fill gaps (don't overwrite workflow entries)
+    // Merge civitai models / master list models — preserve all unique URLs
     civitaiModels.forEach(cm => {
-      const key = (cm.name || '').toLowerCase();
-      if (!modelsMap.has(key)) {
-        modelsMap.set(key, { ...cm });
+      const urlKey = cm.url ? cm.url.toLowerCase() : '';
+      const nameKey = cm.name ? cm.name.toLowerCase() : '';
+      const key = urlKey || nameKey || cm.id;
+
+      if (key && !modelsMap.has(key) && (!nameKey || !modelsMap.has(nameKey))) {
+        modelsMap.set(key, {
+          id: cm.id || 'm_' + key,
+          name: cm.name || '',
+          folder: normalizeModelFolder(cm.folder || 'checkpoints'),
+          url: cm.url || '',
+          size: cm.size || 'Unknown',
+          source: cm.source || 'file',
+        });
       }
     });
 
     // Custom user models always win (added last, override everything)
     customModels.forEach(cm => {
-      const key = cm.name.toLowerCase();
-      modelsMap.set(key, { ...cm });
+      const key = (cm.url || cm.name || cm.id || '').toLowerCase();
+      if (key) modelsMap.set(key, { ...cm });
     });
 
     const list = Array.from(modelsMap.values()).map(m => {
