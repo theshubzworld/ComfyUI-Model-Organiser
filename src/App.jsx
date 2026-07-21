@@ -235,9 +235,9 @@ export default function App() {
     civitaiModels.forEach(cm => {
       const urlKey = cm.url ? cm.url.toLowerCase() : '';
       const nameKey = cm.name ? cm.name.toLowerCase() : '';
-      const key = urlKey || nameKey || cm.id;
+      const key = urlKey || (nameKey && !['lenovo.safetensors', 'model.safetensors'].includes(nameKey) ? nameKey : '') || cm.id;
 
-      if (key && !modelsMap.has(key) && (!nameKey || !modelsMap.has(nameKey))) {
+      if (key && !modelsMap.has(key)) {
         modelsMap.set(key, {
           id: cm.id || 'm_' + key,
           name: cm.name || '',
