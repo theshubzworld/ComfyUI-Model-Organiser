@@ -23,8 +23,10 @@ function parseLine(line) {
   return { url, folder, name };
 }
 
+import { createHash } from 'crypto';
+
 function modelId(url) {
-  try { return Buffer.from(url).toString('base64').slice(0, 32); } catch { return url.slice(-32); }
+  try { return createHash('md5').update(url.trim()).digest('hex'); } catch { return url.slice(-32); }
 }
 
 function cleanUrl(url) {
