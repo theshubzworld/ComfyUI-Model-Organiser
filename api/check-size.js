@@ -121,6 +121,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ url, size: sizeStr });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ url: req.body?.url || '', size: 'Unknown', error: err.message });
   }
 }
