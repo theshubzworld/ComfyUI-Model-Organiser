@@ -3,7 +3,7 @@
  * Loads all models from Supabase model_list & model_cache tables.
  * On first run (empty table), seeds from bundled data/master-model-list.txt.
  */
-import { getDb } from './_db.js';
+import { getDb, cleanName } from './_db.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       return {
         id: m.id || modelId(m.url),
         url: m.url,
-        name: cached.name || m.name || '',
+        name: cleanName(cached.name || m.name || '', m.url),
         folder: cached.folder || m.folder || 'checkpoints',
         size: cached.size || m.size || '',
         source: m.source || 'file',

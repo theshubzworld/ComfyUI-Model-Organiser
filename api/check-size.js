@@ -3,7 +3,7 @@
  * Server-side file size & filename checker. Tries HEAD → Range → CivitAI API → HF API.
  * Saves results to Supabase model_cache.
  */
-import { getDb, upsertCache } from './_db.js';
+import { getDb, upsertCache, cleanName } from './_db.js';
 
 function getCivitaiToken() { return process.env.CIVITAI_TOKEN || process.env.VITE_CIVITAI_TOKEN || ''; }
 function getHfToken() { return process.env.HF_TOKEN || process.env.VITE_HF_TOKEN || ''; }
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
       const cd = r.headers.get('content-disposition');
       if (cd) {
         const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+        if (fnMatch) resolvedName = cleanName(fnMatch[1]);
       }
     } catch (_) {}
 
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
         const cd = r.headers.get('content-disposition');
         if (cd) {
           const fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (fnMatch) resolvedName = fnMatch[1].replace(/['"]/g, '').trim();
+          if (fnMatch) resolvedName = cleanName(fnMatch[1]);
         }
       } catch (_) {}
     }

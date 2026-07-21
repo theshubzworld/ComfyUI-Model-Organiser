@@ -31,8 +31,31 @@ export function cleanUrl(url) {
     .replace(/[?&]$/, '');
 }
 
+/** Sanitize and clean model names (strips UTF-8 prefixes and extracts true filename from URL). */
+export function cleanName(name, url) {
+  let str = String(name || '').trim();
+  str = str
+    .replace(/^(UTF-8|utf-8|utf8|UTF8)['"%27]*['"%27]*/gi, '')
+    .replace(/^''/g, '')
+    .replace(/['"]/g, '')
+    .trim();
+
+  // For HuggingFace URLs or generic/UTF names, extract exact filename from URL path
+  if (url && (url.includes('huggingface.co') || !str || str.startsWith('UTF') || /^\d+$/.test(str))) {
+    try {
+      const pathname = new URL(url).pathname;
+      const lastPart = pathname.split('/').filter(Boolean).pop();
+      if (lastPart && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(lastPart)) {
+        return decodeURIComponent(lastPart);
+      }
+    } catch (_) {}
+  }
+
+  return str;
+}
+
 const isPlaceholder = (n) =>
-  !n || /^\d+$/.test(String(n)) || String(n).startsWith('civitai_');
+  !n || /^\d+$/.test(String(n)) || String(n).startsWith('civitai_') || String(n).startsWith('UTF');
 
 /**
  * Upsert a row into model_cache.
@@ -43,9 +66,10 @@ export async function upsertCache(db, url, { size, name, folder } = {}) {
   const key = cleanUrl(url);
   if (!key) return;
 
+  const sanitizedName = cleanName(name, url);
   const row = { clean_url: key };
   if (size && size !== 'Unknown') row.size = size;
-  if (name && !isPlaceholder(name)) row.name = name;
+  if (sanitizedName && !isPlaceholder(sanitizedName)) row.name = sanitizedName;
   if (folder) row.folder = folder;
 
   if (Object.keys(row).length === 1) return; // nothing to upsert

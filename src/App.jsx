@@ -73,19 +73,25 @@ export default function App() {
   const [civitaiModels, setCivitaiModels] = useState(() => {
     try {
       const saved = localStorage.getItem('simplepod_civitai_models');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      if (saved.includes('UTF-8') || saved.includes('utf-8')) {
+        localStorage.removeItem('simplepod_civitai_models');
+        return [];
+      }
+      return JSON.parse(saved);
     } catch { return []; }
   });
 
-  // Persist modelOverrides to localStorage so fetched sizes survive page reloads
-  // (Vite HMR can trigger full reloads when output files change)
   const [modelOverrides, setModelOverrides] = useState(() => {
     try {
       const saved = localStorage.getItem('simplepod_model_overrides');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
+      if (!saved) return {};
+      if (saved.includes('UTF-8') || saved.includes('utf-8')) {
+        localStorage.removeItem('simplepod_model_overrides');
+        return {};
+      }
+      return JSON.parse(saved);
+    } catch { return {}; }
   });
 
   // Size fetching state
@@ -250,10 +256,28 @@ export default function App() {
     });
 
     const list = Array.from(modelsMap.values()).map(m => {
-      if (modelOverrides[m.id]) {
-        return { ...m, ...modelOverrides[m.id], folder: normalizeModelFolder(modelOverrides[m.id].folder || m.folder) };
+      const merged = modelOverrides[m.id] ? { ...m, ...modelOverrides[m.id] } : { ...m };
+      let cleanName = String(merged.name || '').trim()
+        .replace(/^(UTF-8|utf-8|utf8|UTF8)['"%27]*['"%27]*/gi, '')
+        .replace(/^''/g, '')
+        .replace(/['"]/g, '')
+        .trim();
+
+      if (merged.url && (merged.url.includes('huggingface.co') || !cleanName || cleanName.startsWith('UTF') || /^\d+$/.test(cleanName))) {
+        try {
+          const pathname = new URL(merged.url).pathname;
+          const lastPart = pathname.split('/').filter(Boolean).pop();
+          if (lastPart && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(lastPart)) {
+            cleanName = decodeURIComponent(lastPart);
+          }
+        } catch (_) {}
       }
-      return { ...m, folder: normalizeModelFolder(m.folder) };
+
+      return {
+        ...merged,
+        name: cleanName || m.name || '',
+        folder: normalizeModelFolder(merged.folder || m.folder),
+      };
     });
 
     return list;
