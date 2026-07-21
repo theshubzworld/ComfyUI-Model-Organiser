@@ -2,7 +2,7 @@
  * api/save-models.js — Vercel Serverless Function
  * Saves/updates the full model list in Supabase model_list table.
  */
-import { getDb, upsertCache } from './db.js';
+import { getDb, upsertCache } from './_db.js';
 
 function modelId(url) {
   try { return Buffer.from(url).toString('base64').slice(0, 32); } catch { return url.slice(-32); }

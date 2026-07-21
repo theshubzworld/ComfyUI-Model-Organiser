@@ -383,7 +383,7 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/api/get-tokens":
+        if self.path in ("/api/get-tokens", "/api/tokens"):
             # Return tokens from .env (re-read fresh in case they changed)
             env = load_env_file()
             hf = env.get("VITE_HF_TOKEN", "")

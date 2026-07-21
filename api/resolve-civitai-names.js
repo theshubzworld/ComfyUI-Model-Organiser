@@ -2,7 +2,7 @@
  * api/resolve-civitai-names.js — Vercel Serverless Function
  * Resolves numeric CivitAI version IDs to real filenames. Caches in Supabase.
  */
-import { getDb, upsertCache } from './db.js';
+import { getDb, upsertCache } from './_db.js';
 
 function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
 

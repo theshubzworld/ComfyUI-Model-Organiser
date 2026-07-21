@@ -42,7 +42,7 @@ export function TokenSettingsModal({ isOpen, onClose }) {
 
     // Then try to load fresher values from backend .env
     setBackendStatus('loading');
-    fetch(`${BACKEND}/api/get-tokens`)
+    fetch(`${BACKEND}/api/tokens`)
       .then(r => r.json())
       .then(data => {
         setBackendStatus('ok');
@@ -77,7 +77,7 @@ export function TokenSettingsModal({ isOpen, onClose }) {
 
     // 2. Save to .env via backend (persistent on disk)
     try {
-      await fetch(`${BACKEND}/api/save-tokens`, {
+      await fetch(`${BACKEND}/api/tokens`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hfToken: hf, civitaiToken: civitai }),

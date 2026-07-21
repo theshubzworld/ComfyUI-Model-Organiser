@@ -3,7 +3,7 @@
  * Server-side file size checker. Tries HEAD → Range → CivitAI API → HF API.
  * Saves results to Supabase model_cache.
  */
-import { getDb, upsertCache } from './db.js';
+import { getDb, upsertCache } from './_db.js';
 
 function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
 function getHfToken() { return process.env.VITE_HF_TOKEN || process.env.HF_TOKEN || ''; }

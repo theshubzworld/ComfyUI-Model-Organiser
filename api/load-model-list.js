@@ -3,7 +3,7 @@
  * Loads all models from Supabase model_list table.
  * On first run (empty table), seeds from bundled data/master-model-list.txt.
  */
-import { getDb, cleanUrl } from './db.js';
+import { getDb, cleanUrl } from './_db.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';

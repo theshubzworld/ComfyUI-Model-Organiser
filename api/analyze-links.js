@@ -2,7 +2,7 @@
  * api/analyze-links.js — Vercel Serverless Function
  * Analyzes a batch of URLs for size/filename. Caches results in Supabase.
  */
-import { getDb, upsertCache } from './db.js';
+import { getDb, upsertCache } from './_db.js';
 
 function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
 function getHfToken() { return process.env.VITE_HF_TOKEN || process.env.HF_TOKEN || ''; }
