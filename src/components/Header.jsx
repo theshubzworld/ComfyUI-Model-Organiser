@@ -164,8 +164,8 @@ export default function Header({
               {isFetchingSizes 
                 ? `Scanning (${fetchProgress.done}/${fetchProgress.total})`
                 : missingCount > 0
-                ? `Fetch Sizes (${missingCount})`
-                : 'Re-Scan Sizes'}
+                ? `Fetch Sizes & Names (${missingCount})`
+                : 'Re-Scan Sizes & Names'}
             </span>
           </button>
 

@@ -1,18 +1,30 @@
 /**
  * api/resolve-civitai-names.js — Vercel Serverless Function
- * Resolves numeric CivitAI version IDs to real filenames. Caches in Supabase.
+ * Resolves filenames for CivitAI, HuggingFace, and direct links.
+ * Caches resolved names in Supabase.
  */
 import { getDb, upsertCache } from './_db.js';
 
-function getCivitaiToken() { return process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || ''; }
+function getCivitaiToken() { return process.env.CIVITAI_TOKEN || process.env.VITE_CIVITAI_TOKEN || ''; }
 
-async function resolveModelName(versionId, token) {
+function extractPathFilename(url) {
+  try {
+    const u = new URL(url);
+    const fname = u.pathname.split('/').pop();
+    if (fname && /\.(safetensors|ckpt|pt|bin|onnx|pth|gguf)$/i.test(fname)) {
+      return decodeURIComponent(fname);
+    }
+  } catch (_) {}
+  return '';
+}
+
+async function resolveCivitaiVersion(versionId, token) {
   let apiUrl = `https://civitai.com/api/v1/model-versions/${versionId}`;
   if (token) apiUrl += `?token=${token}`;
   const headers = { 'User-Agent': 'SimplePod-ModelCalculator/1.0' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   try {
-    const r = await fetch(apiUrl, { headers, signal: AbortSignal.timeout(10000) });
+    const r = await fetch(apiUrl, { headers, signal: AbortSignal.timeout(8000) });
     if (!r.ok) return '';
     const data = await r.json();
     const files = data.files || [];
@@ -34,25 +46,44 @@ export default async function handler(req, res) {
       try { body = JSON.parse(body); } catch (_) {}
     }
     const rawModels = Array.isArray(body?.models) ? body.models : Array.isArray(body) ? body : [];
+    const force = Boolean(body?.force);
 
     const civitaiToken = getCivitaiToken();
     const db = getDb();
     const resolved = {};
 
+    // Count name frequencies to detect duplicate names
+    const nameCounts = {};
+    rawModels.forEach(m => {
+      if (m?.name) nameCounts[m.name] = (nameCounts[m.name] || 0) + 1;
+    });
+
     for (const m of rawModels) {
-      if (!m) continue;
-      const url = m.url || '';
-      if (!url.includes('civitai.com') && !url.includes('civitai.red')) continue;
+      if (!m || !m.url) continue;
+      const url = m.url.trim();
       const name = m.name || '';
-      const needsResolve = !name || /^\d+$/.test(name) || name.startsWith('civitai_');
-      if (!needsResolve) continue;
+      const isDuplicate = nameCounts[name] > 1;
+      const isGeneric = !name || /^\d+$/.test(name) || name.startsWith('civitai_');
+
+      if (!force && !isGeneric && !isDuplicate) continue;
+
+      let realName = '';
+
+      // Check CivitAI API version ID
       const match = url.match(/\/models\/(\d+)/);
-      if (!match) continue;
-      const realName = await resolveModelName(match[1], civitaiToken);
-      if (realName) {
+      if (match) {
+        realName = await resolveCivitaiVersion(match[1], civitaiToken);
+      }
+
+      // Check direct URL path filename
+      if (!realName) {
+        realName = extractPathFilename(url);
+      }
+
+      if (realName && realName !== name) {
         resolved[m.id] = realName;
         await upsertCache(db, url, { name: realName }).catch(() => {});
-        console.log(`[civitai-resolve] ${match[1]} -> ${realName}`);
+        console.log(`[resolve-names] ${url.slice(0, 45)} -> ${realName}`);
       }
     }
 

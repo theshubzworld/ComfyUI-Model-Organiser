@@ -267,9 +267,15 @@ export default function App() {
   const attemptedResolveRef = useRef(new Set());
 
   useEffect(() => {
+    // Count name frequencies to detect duplicate placeholder names
+    const nameCounts = {};
+    activeModelsFiltered.forEach(m => {
+      if (m.name) nameCounts[m.name] = (nameCounts[m.name] || 0) + 1;
+    });
+
     const unmappedCivitai = activeModelsFiltered.filter(m => 
-      m.url && (m.url.includes('civitai.com') || m.url.includes('civitai.red')) &&
-      (!m.name || /^\d+$/.test(m.name) || m.name.startsWith('civitai_')) &&
+      m.url &&
+      (!m.name || /^\d+$/.test(m.name) || m.name.startsWith('civitai_') || nameCounts[m.name] > 1) &&
       !attemptedResolveRef.current.has(m.id)
     );
 
