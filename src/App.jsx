@@ -361,13 +361,41 @@ export default function App() {
     setIsSaving(false);
   };
 
-  // ── FETCH MISSING SIZES: concurrent batching, batched state flushes ──────
+  // ── FETCH MISSING/RE-SCAN SIZES & NAMES: concurrent batching, batched state flushes ──────
   const handleFetchMissingSizes = async () => {
-    const targets = activeModelsFiltered.filter(m => (!m.size || m.size === 'Unknown') && m.url);
+    // 1. Force resolve all CivitAI & HF model filenames first
+    fetch('/api/resolve-civitai-names', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ models: activeModelsFiltered, force: true })
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || !data.resolved || !Object.keys(data.resolved).length) return;
+        const resolvedMap = data.resolved;
+        setCivitaiModels(prev => {
+          const next = prev.map(m => resolvedMap[m.id] ? { ...m, name: resolvedMap[m.id] } : m);
+          try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(next)); } catch {}
+          return next;
+        });
+        setModelOverrides(prev => {
+          const next = { ...prev };
+          Object.entries(resolvedMap).forEach(([id, realName]) => {
+            next[id] = { ...(next[id] || {}), name: realName };
+          });
+          try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
+          return next;
+        });
+      })
+      .catch(() => {});
+
+    // 2. Select targets for size scan (if no missing sizes, re-scan all models with valid URLs)
+    let targets = activeModelsFiltered.filter(m => (!m.size || m.size === 'Unknown') && m.url);
     if (targets.length === 0) {
-      alert('All models with valid links already have known sizes!');
-      return;
+      targets = activeModelsFiltered.filter(m => m.url && m.url.startsWith('http'));
     }
+
+    if (targets.length === 0) return;
 
     setIsFetchingSizes(true);
     setFetchProgress({ done: 0, total: targets.length });
