@@ -29,12 +29,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { models = [] } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+    const rawModels = Array.isArray(body?.models) ? body.models : Array.isArray(body) ? body : [];
+
     const civitaiToken = getCivitaiToken();
     const db = getDb();
     const resolved = {};
 
-    for (const m of models) {
+    for (const m of rawModels) {
+      if (!m) continue;
       const url = m.url || '';
       if (!url.includes('civitai.com') && !url.includes('civitai.red')) continue;
       const name = m.name || '';
@@ -53,6 +59,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ resolved, count: Object.keys(resolved).length });
   } catch (err) {
     console.error('[resolve-civitai-names] Error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ resolved: {}, count: 0, error: err.message });
   }
 }

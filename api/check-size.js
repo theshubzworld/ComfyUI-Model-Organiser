@@ -20,8 +20,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  try {
-    const { url, hfToken: clientHf, civitaiToken: clientCivitai } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+    const { url, hfToken: clientHf, civitaiToken: clientCivitai } = body || {};
     if (!url) return res.status(400).json({ error: 'url is required' });
 
     const hfToken = clientHf || getHfToken();

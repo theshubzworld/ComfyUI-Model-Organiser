@@ -1,10 +1,6 @@
 /**
- * api/db.js — Shared Supabase client
+ * api/_db.js — Shared Supabase client
  * Used by all /api/* Vercel serverless functions.
- *
- * Env vars required:
- *   SUPABASE_URL              — https://xxxx.supabase.co
- *   SUPABASE_SERVICE_ROLE_KEY — service_role key (server-side only, never expose to client)
  */
 import { createClient } from '@supabase/supabase-js';
 
@@ -12,10 +8,12 @@ let _client = null;
 
 export function getDb() {
   if (!_client) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url) throw new Error('SUPABASE_URL env variable is not set.');
-    if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY env variable is not set.');
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+    if (!url || !key) {
+      console.warn('[db] Supabase environment variables missing. Database operations skipped.');
+      return null;
+    }
     _client = createClient(url, key, {
       auth: { persistSession: false },
     });
@@ -41,6 +39,7 @@ const isPlaceholder = (n) =>
  * Only updates fields that are provided and non-placeholder.
  */
 export async function upsertCache(db, url, { size, name, folder } = {}) {
+  if (!db) return;
   const key = cleanUrl(url);
   if (!key) return;
 
@@ -51,9 +50,13 @@ export async function upsertCache(db, url, { size, name, folder } = {}) {
 
   if (Object.keys(row).length === 1) return; // nothing to upsert
 
-  const { error } = await db
-    .from('model_cache')
-    .upsert(row, { onConflict: 'clean_url', ignoreDuplicates: false });
+  try {
+    const { error } = await db
+      .from('model_cache')
+      .upsert(row, { onConflict: 'clean_url', ignoreDuplicates: false });
 
-  if (error) console.warn('[cache] upsert error:', error.message);
+    if (error) console.warn('[cache] upsert error:', error.message);
+  } catch (err) {
+    console.warn('[cache] Exception during upsert:', err.message);
+  }
 }

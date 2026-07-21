@@ -1,9 +1,9 @@
 /**
  * api/load-model-list.js — Vercel Serverless Function
- * Loads all models from Supabase model_list table.
+ * Loads all models from Supabase model_list & model_cache tables.
  * On first run (empty table), seeds from bundled data/master-model-list.txt.
  */
-import { getDb, cleanUrl } from './_db.js';
+import { getDb } from './_db.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -27,6 +27,15 @@ function modelId(url) {
   try { return Buffer.from(url).toString('base64').slice(0, 32); } catch { return url.slice(-32); }
 }
 
+function cleanUrl(url) {
+  if (!url) return url;
+  return url
+    .replace('civitai.red', 'civitai.com')
+    .replace(/[?&]token=[a-zA-Z0-9_-]+/g, '')
+    .replace(/\?&/, '?')
+    .replace(/[?&]$/, '');
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -35,56 +44,72 @@ export default async function handler(req, res) {
   try {
     const db = getDb();
 
-    // Check if model_list has rows
-    const { count } = await db
+    if (!db) {
+      // Return bundled file if DB not configured
+      if (existsSync(MASTER_LIST)) {
+        const lines = readFileSync(MASTER_LIST, 'utf-8').split('\n');
+        const models = lines.map(parseLine).filter(Boolean).map(m => ({
+          id: modelId(m.url),
+          url: m.url,
+          name: m.name || '',
+          folder: m.folder,
+          size: '',
+          source: 'file',
+        }));
+        return res.status(200).json({ models, count: models.length, fallback: true });
+      }
+      return res.status(200).json({ models: [], count: 0 });
+    }
+
+    // 1. Check count of model_list
+    const { count, error: countErr } = await db
       .from('model_list')
       .select('*', { count: 'exact', head: true });
 
-    if ((count ?? 0) === 0 && existsSync(MASTER_LIST)) {
-      // Seed from bundled file on first run
+    if (!countErr && (count ?? 0) === 0 && existsSync(MASTER_LIST)) {
+      // Seed from bundled file
       console.log('[load-model-list] Seeding from master-model-list.txt...');
       const lines = readFileSync(MASTER_LIST, 'utf-8').split('\n');
-      const rows = [];
-      for (const line of lines) {
-        const m = parseLine(line);
-        if (!m) continue;
-        rows.push({
-          id: modelId(m.url),
-          url: m.url,
-          name: m.name || null,
-          folder: m.folder,
-          size: null,
-          source: 'file',
-        });
-      }
-      // Upsert in batches of 200
+      const rows = lines.map(parseLine).filter(Boolean).map(m => ({
+        id: modelId(m.url),
+        url: m.url,
+        name: m.name || null,
+        folder: m.folder,
+        size: null,
+        source: 'file',
+      }));
       for (let i = 0; i < rows.length; i += 200) {
-        await db.from('model_list').upsert(rows.slice(i, i + 200), { onConflict: 'id', ignoreDuplicates: true });
+        await db.from('model_list').upsert(rows.slice(i, i + 200), { onConflict: 'id', ignoreDuplicates: true }).catch(() => {});
       }
-      console.log(`[load-model-list] Seeded ${rows.length} models`);
     }
 
-    // Load all models joined with cache (for resolved sizes/names)
-    const { data: models, error } = await db
+    // 2. Fetch models from model_list
+    const { data: dbModels } = await db
       .from('model_list')
-      .select(`
-        id, url, folder, source,
-        name, size,
-        model_cache!model_list_url_fkey (name, size)
-      `)
+      .select('id, url, folder, source, name, size')
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    // 3. Fetch cache entries
+    const { data: cacheRows } = await db
+      .from('model_cache')
+      .select('clean_url, name, size, folder');
 
-    // Merge: prefer cache values over base row values
-    const result = (models || []).map(m => {
-      const cache = m.model_cache?.[0] || {};
+    const cacheMap = {};
+    (cacheRows || []).forEach(c => {
+      if (c.clean_url) cacheMap[c.clean_url] = c;
+    });
+
+    const sourceList = (dbModels && dbModels.length > 0) ? dbModels : (existsSync(MASTER_LIST) ? readFileSync(MASTER_LIST, 'utf-8').split('\n').map(parseLine).filter(Boolean).map(m => ({ id: modelId(m.url), ...m })) : []);
+
+    const result = sourceList.map(m => {
+      const cKey = cleanUrl(m.url);
+      const cached = cacheMap[cKey] || {};
       return {
-        id: m.id,
+        id: m.id || modelId(m.url),
         url: m.url,
-        name: cache.name || m.name || '',
-        folder: m.folder || 'checkpoints',
-        size: cache.size || m.size || '',
+        name: cached.name || m.name || '',
+        folder: cached.folder || m.folder || 'checkpoints',
+        size: cached.size || m.size || '',
         source: m.source || 'file',
       };
     });
@@ -92,7 +117,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ models: result, count: result.length });
   } catch (err) {
     console.error('[load-model-list] Error:', err.message);
-    // Graceful fallback: serve from bundled file if DB fails
     if (existsSync(MASTER_LIST)) {
       const lines = readFileSync(MASTER_LIST, 'utf-8').split('\n');
       const models = lines.map(parseLine).filter(Boolean).map(m => ({
@@ -105,6 +129,6 @@ export default async function handler(req, res) {
       }));
       return res.status(200).json({ models, count: models.length, fallback: true });
     }
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ models: [], count: 0, error: err.message });
   }
 }

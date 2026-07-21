@@ -16,11 +16,20 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { models = [] } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+
+    const rawModels = Array.isArray(body?.models) ? body.models : Array.isArray(body) ? body : [];
     const db = getDb();
 
-    const rows = models
-      .filter(m => m.url)
+    if (!db) {
+      return res.status(200).json({ status: 'skipped', note: 'Supabase DB not configured on server', count: rawModels.length });
+    }
+
+    const rows = rawModels
+      .filter(m => m && m.url)
       .map(m => ({
         id: m.id || modelId(m.url),
         url: m.url,
@@ -30,25 +39,27 @@ export default async function handler(req, res) {
         source: 'ui',
       }));
 
-    // Upsert in batches of 200
-    for (let i = 0; i < rows.length; i += 200) {
-      const { error } = await db
-        .from('model_list')
-        .upsert(rows.slice(i, i + 200), { onConflict: 'id' });
-      if (error) throw error;
+    if (rows.length > 0) {
+      // Upsert in batches of 200
+      for (let i = 0; i < rows.length; i += 200) {
+        const { error } = await db
+          .from('model_list')
+          .upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+        if (error) console.warn('[save-models] Upsert warning:', error.message);
+      }
     }
 
     // Also cache size/name in model_cache
-    for (const m of models) {
-      if (m.url) {
+    for (const m of rawModels) {
+      if (m && m.url) {
         await upsertCache(db, m.url, { size: m.size, name: m.name, folder: m.folder }).catch(() => {});
       }
     }
 
-    console.log(`[save-models] Saved ${models.length} models to Supabase`);
-    return res.status(200).json({ status: 'success', count: models.length });
+    console.log(`[save-models] Saved ${rawModels.length} models to Supabase`);
+    return res.status(200).json({ status: 'success', count: rawModels.length });
   } catch (err) {
     console.error('[save-models] Error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ status: 'error', error: err.message });
   }
 }

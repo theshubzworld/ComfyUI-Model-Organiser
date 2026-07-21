@@ -67,10 +67,13 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  try {
-    const { urls = [] } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) {}
+    }
+    const rawUrls = Array.isArray(body?.urls) ? body.urls : Array.isArray(body?.models) ? body.models : Array.isArray(body) ? body : [];
     const db = getDb();
-    const results = await Promise.all(urls.map(analyzeUrl));
+    const results = await Promise.all(rawUrls.map(analyzeUrl));
     for (const r of results) {
       if (r.size !== 'Unknown' || r.name) {
         await upsertCache(db, r.url, { size: r.size, name: r.name }).catch(() => {});
