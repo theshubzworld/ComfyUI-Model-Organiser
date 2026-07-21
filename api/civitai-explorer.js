@@ -23,8 +23,18 @@ export default async function handler(req, res) {
 
   const civitaiToken = process.env.VITE_CIVITAI_TOKEN || process.env.CIVITAI_TOKEN || '';
 
-  // Forward all query params
-  const params = new URLSearchParams(req.query || {});
+  // Forward & sanitize query params (strip 'All', empty strings, and invalid enums)
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(req.query || {})) {
+    if (!val || val === 'All' || val === 'all' || val === 'undefined' || val === 'null' || key === 'enums') continue;
+    // CivitAI accepts 'types' (plural) for model type
+    if (key === 'types' || key === 'type') {
+      params.set('types', val);
+    } else {
+      params.set(key, val);
+    }
+  }
+
   if (civitaiToken && !params.has('token')) params.set('token', civitaiToken);
 
   const url = `https://civitai.com/api/v1/models?${params.toString()}`;

@@ -219,20 +219,20 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
     setStatus('loading');
     setErrorMsg('');
     try {
-      const params = new URLSearchParams({
-        query: query.trim(),
-        types: selectedType,
-        baseModels: selectedBaseModel,
-        checkpointType: selectedCheckpointType,
-        tag: selectedTag.trim(),
-        username: selectedUsername.trim(),
-        nsfw: selectedNsfw,
-        sort: selectedSort,
-        period: selectedPeriod,
-        page: page.toString(),
-        limit: '20',
-      });
-      const res = await fetch(`/api/civitai-explorer?${params}`);
+      const params = new URLSearchParams();
+      if (query.trim()) params.set('query', query.trim());
+      if (selectedType && selectedType !== 'All') params.set('types', selectedType);
+      if (selectedBaseModel && selectedBaseModel !== 'All') params.set('baseModels', selectedBaseModel);
+      if (selectedCheckpointType && selectedCheckpointType !== 'All') params.set('checkpointType', selectedCheckpointType);
+      if (selectedTag.trim()) params.set('tag', selectedTag.trim());
+      if (selectedUsername.trim()) params.set('username', selectedUsername.trim());
+      if (selectedNsfw && selectedNsfw !== 'All') params.set('nsfw', selectedNsfw);
+      if (selectedSort) params.set('sort', selectedSort);
+      if (selectedPeriod) params.set('period', selectedPeriod);
+      params.set('page', page.toString());
+      params.set('limit', '20');
+
+      const res = await fetch(`/api/civitai-explorer?${params.toString()}`);
       if (!res.ok) throw new Error(`CivitAI server error ${res.status}`);
       const data = await res.json();
       setItems(data.items || []);
