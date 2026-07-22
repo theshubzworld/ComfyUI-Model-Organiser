@@ -70,32 +70,152 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   };
 
   const processNodeData = (nodeType, inputsOrWidgets, properties = {}) => {
-    // 0. Skip media output / video / image / note nodes completely!
-    if (isMediaNode(nodeType)) return;
+    const typeStr = toStr(nodeType).toLowerCase();
+    
+    // 0. Skip media output / video / image nodes (DO NOT skip notes!)
+    const mediaNodes = [
+      'vhs_videocombine', 'vhs_loadvideo', 'loadvideo', 'savevideo', 'loadimage', 
+      'saveimage', 'previewimage', 'vhs_loadimages', 'vhs_loadimagespath', 
+      'saveimagewebp', 'animatedpng'
+    ];
+    if (mediaNodes.some(m => typeStr.includes(m))) return;
 
-    // 1. Scan properties models array
-    if (properties && properties.models && Array.isArray(properties.models)) {
-      properties.models.forEach(m => {
-        if (!m) return;
-        const url = toStr(m.url);
-        const name = toStr(m.name || m.filename) || (url ? getFilenameFromUrl(url) : '');
-        if ((name || url) && isModelFileOrUrl(url, name)) {
-          results.push({
-            name: name,
-            url: url,
-            folder: guessFolderFromNode(nodeType, name, toStr(m.directory)),
-            nodeType: toStr(nodeType)
-          });
+    // Extract all raw string text inside widgets_values, inputs, or properties
+    const textValues = [];
+    const extractStrings = (obj) => {
+      if (!obj) return;
+      if (typeof obj === 'string') textValues.push(obj);
+      else if (Array.isArray(obj)) obj.forEach(extractStrings);
+      else if (typeof obj === 'object') Object.values(obj).forEach(extractStrings);
+    };
+    extractStrings(inputsOrWidgets);
+    if (properties && properties.text) extractStrings(properties.text);
+    if (properties && properties.models) extractStrings(properties.models);
+
+    const fullTextContent = textValues.join('\n');
+
+    // -----------------------------------------------------------------
+    // TYPE 1: Markdown Note Node ("Model: ... Output folder: ...")
+    // -----------------------------------------------------------------
+    if (typeStr.includes('note') || typeStr.includes('markdown') || typeStr.includes('displaytext') || fullTextContent.includes('Output folder:')) {
+      const lines = fullTextContent.split(/\r?\n/);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        let url = '';
+        let filename = '';
+        let folder = '';
+
+        // Match Markdown link: [ModelName](https://url)
+        const mdMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/i);
+        if (mdMatch) {
+          filename = mdMatch[1].trim();
+          url = mdMatch[2].trim();
+        } else {
+          const urlMatch = line.match(/(https?:\/\/[^\s"'\)]+)/i);
+          if (urlMatch) url = urlMatch[1].trim();
+
+          const modelMatch = line.match(/(?:Model|File):\s*([^\s"'\*\#\<\>]+)/i);
+          if (modelMatch) filename = modelMatch[1].trim();
         }
-      });
+
+        if (url || filename) {
+          // Look ahead up to 4 lines for Output folder:
+          for (let j = i + 1; j <= Math.min(i + 4, lines.length - 1); j++) {
+            const nextLine = lines[j].trim();
+            const outputFolderMatch = nextLine.match(/(?:Output folder|folder):\s*([^\n\r]+)/i) || 
+                                      nextLine.match(/(?:App\\ComfyUI\\models\\|models\\|models\/)([^\n\r\s]+)/i);
+            if (outputFolderMatch) {
+              folder = outputFolderMatch[1].trim().replace(/\\/g, '/');
+              break;
+            }
+          }
+
+          if (!filename && url) filename = getFilenameFromUrl(url);
+
+          if ((url || filename) && isModelFileOrUrl(url, filename)) {
+            results.push({
+              name: filename,
+              url: url,
+              folder: guessFolderFromNode(nodeType, filename, folder),
+              nodeType: 'Markdown Note'
+            });
+          }
+        }
+      }
+      return;
     }
 
-    // 2. Scan inputs or widgets object / array
+    // -----------------------------------------------------------------
+    // TYPE 2: Downloader Node (multi-line "URL folder custom_filename")
+    // -----------------------------------------------------------------
+    if (fullTextContent.includes('http') && fullTextContent.includes('\n')) {
+      const lines = fullTextContent.split(/\r?\n/);
+      let parsedAnyDownloaderLine = false;
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) return;
+
+        const parts = trimmed.split(/\s+/);
+        if (parts.length >= 1 && parts[0].startsWith('http')) {
+          parsedAnyDownloaderLine = true;
+          const url = parts[0];
+          const secondPart = parts[1] || '';
+          const thirdPart = parts[2] || '';
+
+          let folder = '';
+          let filename = thirdPart;
+
+          if (secondPart) {
+            const cleanPath = secondPart.replace(/\\/g, '/');
+            if (cleanPath.startsWith('models/')) {
+              const pathSegments = cleanPath.replace(/^models\//, '').split('/');
+              folder = pathSegments[0];
+              const lastSegment = pathSegments[pathSegments.length - 1];
+              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft)$/i.test(lastSegment)) {
+                filename = lastSegment;
+                folder = pathSegments.slice(0, -1).join('/');
+              } else if (pathSegments.length > 1) {
+                folder = pathSegments.join('/');
+              }
+            } else if (cleanPath.includes('/')) {
+              const pathSegments = cleanPath.split('/');
+              const lastSegment = pathSegments[pathSegments.length - 1];
+              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft)$/i.test(lastSegment)) {
+                filename = lastSegment;
+                folder = pathSegments.slice(0, -1).join('/');
+              } else {
+                folder = cleanPath;
+              }
+            } else {
+              folder = secondPart;
+            }
+          }
+
+          if (!filename) filename = getFilenameFromUrl(url);
+
+          if (isModelFileOrUrl(url, filename)) {
+            results.push({
+              name: filename,
+              url: url,
+              folder: guessFolderFromNode(nodeType, filename, folder),
+              nodeType: toStr(nodeType) || 'Downloader Node'
+            });
+          }
+        }
+      });
+
+      if (parsedAnyDownloaderLine) return;
+    }
+
+    // -----------------------------------------------------------------
+    // TYPE 3: Standard ComfyUI Model Loader Node
+    // -----------------------------------------------------------------
     const scanValue = (val, keyHint = '') => {
       if (!val) return;
-
       if (typeof val === 'string') {
-        // Check if string contains http(s) URL
         const matches = val.match(urlRegex);
         if (matches) {
           matches.forEach(rawUrl => {
@@ -111,7 +231,6 @@ export function extractLinksFromWorkflowJson(jsonObj) {
             }
           });
         } else {
-          // Check if string ends with model extension
           const lower = val.toLowerCase();
           if (validExtensions.some(ext => lower.endsWith(ext)) && !ignoredExtensions.some(ext => lower.endsWith(ext))) {
             const filename = val.split(/[/\\]/).pop();
@@ -126,7 +245,6 @@ export function extractLinksFromWorkflowJson(jsonObj) {
       } else if (typeof val === 'object') {
         const rawUrl = toStr(val.url || val.link || val.download_url);
         const rawName = toStr(val.name || val.filename || val.model_name);
-
         if (rawUrl || rawName) {
           const url = rawUrl;
           const name = rawName || getFilenameFromUrl(url);
@@ -138,17 +256,12 @@ export function extractLinksFromWorkflowJson(jsonObj) {
               nodeType: toStr(nodeType) || 'Downloader Node'
             });
           }
-        } else {
-          Object.entries(val).forEach(([k, v]) => scanValue(v, k));
         }
       }
     };
 
-    if (Array.isArray(inputsOrWidgets)) {
-      inputsOrWidgets.forEach(w => scanValue(w));
-    } else if (inputsOrWidgets && typeof inputsOrWidgets === 'object') {
-      Object.entries(inputsOrWidgets).forEach(([k, v]) => scanValue(v, k));
-    }
+    if (Array.isArray(inputsOrWidgets)) inputsOrWidgets.forEach(w => scanValue(w));
+    else if (inputsOrWidgets && typeof inputsOrWidgets === 'object') Object.entries(inputsOrWidgets).forEach(([k, v]) => scanValue(v, k));
   };
 
   // Check UI Graph format: jsonObj.nodes
