@@ -26,7 +26,6 @@ export default function App() {
   const [, startTransition] = useTransition();
   const fetchAbortRef = useRef(null);
 
-  const [workflows, setWorkflows] = useState(workflowData.workflows || []);
   const [catalog] = useState(workflowData.catalog || []);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -80,6 +79,21 @@ export default function App() {
   // Custom user added model overrides, custom models, and community shared models
   const [customModels, setCustomModels] = useState([]);
   const [communityModels, setCommunityModels] = useState([]);
+
+  // Custom uploaded workflows state (persisted to Supabase user_custom_workflows & localStorage)
+  const [customWorkflows, setCustomWorkflows] = useState(() => {
+    try {
+      const saved = localStorage.getItem('simplepod_custom_workflows');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const workflows = useMemo(() => {
+    const builtIn = workflowData.workflows || [];
+    const customIds = new Set(customWorkflows.map(w => w.id));
+    const dedupedBuiltIn = builtIn.filter(w => !customIds.has(w.id));
+    return [...customWorkflows, ...dedupedBuiltIn];
+  }, [customWorkflows]);
 
   // CivitAI models auto-loaded from civitai_download.txt on startup
   // Persisted to localStorage so they survive HMR reloads
@@ -282,6 +296,23 @@ export default function App() {
         if (publicData) {
           setCommunityModels(publicData.map(m => ({ ...m, catalogOrigin: 'community', isPublic: true })));
         }
+
+        // 5. Fetch Current User Custom Uploaded Workflows from Supabase
+        const { data: userWfData } = await supabase
+          .from('user_custom_workflows')
+          .select('id, name, category, models, raw_json')
+          .eq('user_id', user.id);
+
+        if (userWfData && userWfData.length > 0) {
+          const loadedWfs = userWfData.map(w => ({
+            id: w.id,
+            name: w.name,
+            category: w.category || 'CUSTOM',
+            models: w.models || [],
+            rawJson: w.raw_json
+          }));
+          setCustomWorkflows(loadedWfs);
+        }
       } finally {
         // Yield execution to allow states to flush
         setTimeout(() => {
@@ -379,9 +410,34 @@ export default function App() {
   };
 
   const handleCustomWorkflowUploaded = (newWf) => {
-    setWorkflows(prev => [newWf, ...prev]);
-    setSelectedWorkflowIds(prev => [...prev, newWf.id]);
+    setCustomWorkflows(prev => [newWf, ...prev.filter(w => w.id !== newWf.id)]);
+    setSelectedWorkflowIds(prev => Array.from(new Set([...prev, newWf.id])));
   };
+
+  // Sync Custom Workflows to Supabase/localStorage
+  useEffect(() => {
+    if (isSyncingFromDbRef.current) return;
+    if (user) {
+      const syncCustomWorkflows = async () => {
+        await supabase.from('user_custom_workflows').delete().eq('user_id', user.id);
+        if (customWorkflows.length > 0) {
+          const rows = customWorkflows.map(wf => ({
+            user_id: user.id,
+            id: wf.id,
+            name: wf.name || 'Custom Workflow',
+            category: wf.category || 'CUSTOM',
+            models: wf.models || [],
+            raw_json: wf.rawJson || null,
+            updated_at: new Date().toISOString()
+          }));
+          await supabase.from('user_custom_workflows').insert(rows);
+        }
+      };
+      syncCustomWorkflows().catch(err => console.warn('[App] Error syncing custom workflows:', err));
+    } else {
+      try { localStorage.setItem('simplepod_custom_workflows', JSON.stringify(customWorkflows)); } catch {}
+    }
+  }, [customWorkflows, user]);
 
   // ── Auto-load civitai_download.txt once on mount ─────────────────────────
   useEffect(() => {
