@@ -10,6 +10,7 @@ import { ModelSearchModal } from './components/ModelSearchModal';
 import { ModelExplorer } from './components/ModelExplorer';
 import { LinkAnalyzerModal } from './components/LinkAnalyzerModal';
 import { WorkflowLinkExtractorModal } from './components/WorkflowLinkExtractorModal';
+import { WorkflowLinkExtractorPage } from './components/WorkflowLinkExtractorPage';
 import { calculateStorageBreakdown } from './services/sizeCalculator';
 
 import { fetchRemoteFileSize } from './services/sizeFetcher';
@@ -1182,7 +1183,7 @@ export default function App() {
                     onSelectAllWorkflows={handleSelectAllWorkflows}
                     onClearWorkflowSelection={handleClearWorkflowSelection}
                     onCustomWorkflowUploaded={handleCustomWorkflowUploaded}
-                    onOpenLinkExtractor={() => setIsLinkExtractorModalOpen(true)}
+                    onOpenLinkExtractor={() => setActiveTab('extractor')}
                     catalog={catalog}
                   />
                 </div>
@@ -1241,6 +1242,13 @@ export default function App() {
           <ModelExplorer
             onAddModel={handleAddModel}
             existingModels={activeModelsFiltered}
+          />
+        )}
+
+        {/* TAB 4: WORKFLOW LINK EXTRACTOR PAGE */}
+        {activeTab === 'extractor' && (
+          <WorkflowLinkExtractorPage
+            onBulkAddModels={handleBulkAddModels}
           />
         )}
 

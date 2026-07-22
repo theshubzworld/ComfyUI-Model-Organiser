@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   HardDrive, Plus, Cpu, RefreshCw, 
   LayoutDashboard, Layers, Terminal, Save, Check, Key, Compass,
-  Sun, Moon, Wrench
+  Sun, Moon, Wrench, FileJson
 } from 'lucide-react';
 
 export default function Header({ 
@@ -92,6 +92,18 @@ export default function Header({
             >
               <Compass className="w-3.5 h-3.5" />
               <span>Model Explorer</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('extractor')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'extractor'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <FileJson className="w-3.5 h-3.5" />
+              <span>Link Extractor</span>
             </button>
 
             <button
