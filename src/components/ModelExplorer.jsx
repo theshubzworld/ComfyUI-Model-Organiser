@@ -3,9 +3,10 @@ import {
   Search, Filter, RefreshCw, ExternalLink, Plus, Check, Copy,
   Star, Download, ThumbsUp, Layers, HardDrive, AlertCircle, Sparkles,
   ChevronLeft, ChevronRight, X, User, Tag, Image as ImageIcon, SlidersHorizontal,
-  Flame, Calendar, Shield, Cpu
+  Flame, Calendar, Shield, Cpu, FolderTree
 } from 'lucide-react';
 import { loadTokens } from './TokenSettingsModal';
+import { RepositoryFilesModal } from './RepositoryFilesModal';
 
 const MODEL_TYPES = [
   'All',
@@ -314,19 +315,35 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
     selectedPeriod !== 'AllTime' ? selectedPeriod : '',
   ].filter(Boolean).length;
 
+  const [treeModalModel, setTreeModalModel] = useState(null);
+  const [addedToast, setAddedToast] = useState(null);
+
   const handleAddModelItem = (model, versionObj, fileObj) => {
     const { civitaiToken } = loadTokens();
-    let downloadUrl = fileObj?.downloadUrl || versionObj?.downloadUrl || model.url;
+    let downloadUrl = fileObj?.downloadUrl || versionObj?.downloadUrl || model.url || '';
     if (platformTab === 'civitai' && civitaiToken && !downloadUrl.includes('token=')) {
       downloadUrl += `&token=${civitaiToken}`;
     }
 
     const folderMap = {
-      'lora': 'loras', 'locon': 'loras',
-      'checkpoint': 'checkpoints',
-      'textualinversion': 'embeddings',
-      'vae': 'vae', 'controlnet': 'controlnet',
-      'upscaler': 'upscale_models',
+      checkpoint: 'checkpoints',
+      lora: 'loras',
+      locon: 'loras',
+      dora: 'loras',
+      controlnet: 'controlnet',
+      upscaler: 'upscale_models',
+      motionmodule: 'animatediff_models',
+      vae: 'vae',
+      textencoder: 'clip',
+      unet: 'diffusion_models',
+      clipvision: 'clip_vision',
+      poses: 'poses',
+      wildcards: 'wildcards',
+      workflows: 'workflows',
+      detection: 'ultralytics',
+      visionlanguage: 'LLM',
+      clip: 'clip',
+      llm: 'LLM',
     };
     const folder = folderMap[model.type?.toLowerCase()] || 'checkpoints';
     const filename = fileObj?.name || `${model.name}.safetensors`;
@@ -342,6 +359,13 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
 
     onAddModel(newModel);
     setAddedIds(prev => new Set(prev).add(model.id || filename));
+
+    setAddedToast({
+      name: filename,
+      folder: folder,
+      modelName: model.name
+    });
+    setTimeout(() => setAddedToast(null), 6000);
   };
 
   const handleCopyUrl = (url, id) => {
@@ -351,7 +375,23 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 w-full px-4 lg:px-8 py-6">
+    <div className="flex-1 flex flex-col space-y-6 w-full px-4 lg:px-8 py-6 relative">
+
+      {/* Toast Notification for Model Addition */}
+      {addedToast && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 backdrop-blur-xl shadow-2xl text-emerald-200 text-xs flex items-center gap-3 animate-slideUp">
+          <Check className="w-5 h-5 text-emerald-400 shrink-0" />
+          <div>
+            <div className="font-bold text-white">Added to Model Catalog!</div>
+            <div className="font-mono text-[11px] text-emerald-300">
+              {addedToast.name} → <span className="font-bold underline">models/{addedToast.folder}</span>
+            </div>
+          </div>
+          {onAddModel && (
+            <span className="text-[10px] text-emerald-400 font-bold">Saved in DB!</span>
+          )}
+        </div>
+      )}
 
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
@@ -820,38 +860,52 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                    <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+                      
+                      {/* Inspect Subfolders Button */}
                       <button
-                        onClick={() => handleAddModelItem(model, activeVersion, primaryFile)}
-                        disabled={isAdded}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                          isAdded
-                            ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/25'
-                        }`}
+                        onClick={() => setTreeModalModel(model)}
+                        className="w-full py-1.5 px-3 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                        title="Explore files inside subfolders (VAEs, LoRAs, Text Encoders)"
                       >
-                        {isAdded ? <><Check className="w-3.5 h-3.5" /> Added</> : <><Plus className="w-3.5 h-3.5" /> Add to List</>}
+                        <FolderTree className="w-3.5 h-3.5 text-violet-400" />
+                        <span>Inspect Files & Subfolders</span>
                       </button>
 
-                      {/* Copy Link */}
-                      <button
-                        onClick={() => handleCopyUrl(primaryFile?.downloadUrl || model.url, model.id)}
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="Copy download URL"
-                      >
-                        {copiedUrl === model.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAddModelItem(model, activeVersion, primaryFile)}
+                          disabled={isAdded}
+                          className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                            isAdded
+                              ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/25'
+                          }`}
+                          title={`Add ${primaryFile?.name || model.name} to model list`}
+                        >
+                          {isAdded ? <><Check className="w-3.5 h-3.5" /> Added</> : <><Plus className="w-3.5 h-3.5" /> Add to List</>}
+                        </button>
 
-                      {/* External Link */}
-                      <a
-                        href={platformTab === 'civitai' ? `https://civitai.com/models/${model.id}` : model.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="Open on website"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
+                        {/* Copy Link */}
+                        <button
+                          onClick={() => handleCopyUrl(primaryFile?.downloadUrl || model.url, model.id)}
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          title="Copy direct download URL"
+                        >
+                          {copiedUrl === model.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+
+                        {/* External Link */}
+                        <a
+                          href={platformTab === 'civitai' ? `https://civitai.com/models/${model.id}` : model.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          title="Open on website"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -883,6 +937,15 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
           )}
         </>
       )}
+
+      {/* Subfolder & Files Tree Inspector Modal */}
+      <RepositoryFilesModal
+        isOpen={Boolean(treeModalModel)}
+        onClose={() => setTreeModalModel(null)}
+        model={treeModalModel}
+        platformTab={platformTab}
+        onAddModelItem={handleAddModelItem}
+      />
 
     </div>
   );

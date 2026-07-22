@@ -27,3 +27,15 @@ export function normalizeModelFolder(folder = 'checkpoints') {
 
   return normalized || 'checkpoints';
 }
+
+export function guessFolderFromFilename(filename = '', defaultType = 'checkpoints') {
+  const f = String(filename).toLowerCase();
+  if (f.includes('vae')) return 'vae';
+  if (f.includes('lora') || f.includes('locon') || f.includes('dora')) return 'loras';
+  if (f.includes('clip') || f.includes('t5') || f.includes('text_encoder')) return 'clip';
+  if (f.includes('controlnet') || f.includes('control')) return 'controlnet';
+  if (f.includes('upscale')) return 'upscale_models';
+  if (f.includes('gguf') || f.includes('llm')) return 'LLM';
+  if (f.includes('unet') || f.includes('transformer') || f.includes('diffusion')) return 'diffusion_models';
+  return normalizeModelFolder(defaultType);
+}
