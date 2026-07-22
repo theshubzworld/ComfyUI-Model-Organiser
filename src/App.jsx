@@ -598,36 +598,57 @@ export default function App() {
       const urlKey = cm.url ? cm.url.toLowerCase() : '';
       const nameKey = cm.name ? cm.name.toLowerCase() : '';
       const key = urlKey || (nameKey && !['lenovo.safetensors', 'model.safetensors'].includes(nameKey) ? nameKey : '') || cm.id;
-      if (key && !fullCatalogMap.has(key)) {
-        fullCatalogMap.set(key, {
-          id: cm.id || 'm_' + key,
-          name: cm.name || '',
-          folder: normalizeModelFolder(cm.folder || 'checkpoints'),
-          url: cm.url || '',
-          size: cm.size || 'Unknown',
-          source: cm.source || 'civitai',
-          catalogOrigin: 'master'
-        });
+      if (key) {
+        const existing = fullCatalogMap.get(key) || (nameKey ? fullCatalogMap.get(nameKey) : null);
+        if (!existing) {
+          fullCatalogMap.set(key, {
+            id: cm.id || 'm_' + key,
+            name: cm.name || '',
+            folder: normalizeModelFolder(cm.folder || 'checkpoints'),
+            url: cm.url || '',
+            size: cm.size || 'Unknown',
+            source: cm.source || 'civitai',
+            catalogOrigin: 'master'
+          });
+        } else {
+          if (!existing.url && cm.url) existing.url = cm.url;
+          if ((!existing.size || existing.size === 'Unknown') && cm.size && cm.size !== 'Unknown') existing.size = cm.size;
+        }
       }
     });
 
     communityModels.forEach(cm => {
       const key = (cm.url || cm.name || cm.id || '').toLowerCase();
-      if (key && !fullCatalogMap.has(key)) {
-        fullCatalogMap.set(key, {
-          ...cm,
-          catalogOrigin: 'community'
-        });
+      const nameKey = (cm.name || '').toLowerCase();
+      if (key) {
+        const existing = fullCatalogMap.get(key) || (nameKey ? fullCatalogMap.get(nameKey) : null);
+        if (!existing) {
+          fullCatalogMap.set(key, {
+            ...cm,
+            catalogOrigin: 'community'
+          });
+        } else {
+          if (!existing.url && cm.url) existing.url = cm.url;
+          if ((!existing.size || existing.size === 'Unknown') && cm.size && cm.size !== 'Unknown') existing.size = cm.size;
+        }
       }
     });
 
     customModels.forEach(cm => {
       const key = (cm.url || cm.name || cm.id || '').toLowerCase();
+      const nameKey = (cm.name || '').toLowerCase();
       if (key) {
-        fullCatalogMap.set(key, {
-          ...cm,
-          catalogOrigin: 'personal'
-        });
+        const existing = fullCatalogMap.get(key) || (nameKey ? fullCatalogMap.get(nameKey) : null);
+        if (!existing) {
+          fullCatalogMap.set(key, {
+            ...cm,
+            catalogOrigin: 'personal'
+          });
+        } else {
+          if (cm.url) existing.url = cm.url;
+          if (cm.size && cm.size !== 'Unknown') existing.size = cm.size;
+          existing.catalogOrigin = 'personal';
+        }
       }
     });
 

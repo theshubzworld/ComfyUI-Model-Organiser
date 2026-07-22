@@ -540,46 +540,55 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                     civ_headers = {"User-Agent": "SimplePod-ModelCalculator/1.0"}
                     if civitai_token:
                         civ_headers["Authorization"] = f"Bearer {civitai_token}"
-                    civ_url = f"https://civitai.com/api/v1/models?query={quote(q)}&limit=6&sort=Highest%20Rated"
+                    civ_url = f"https://civitai.com/api/v1/models?query={quote(q)}&limit=10&nsfw=true&sort=Highest%20Rated"
+                    if civitai_token:
+                        civ_url += f"&token={civitai_token}"
                     r = requests.get(civ_url, headers=civ_headers, timeout=8)
                     if r.status_code != 200:
                         return []
                     civ_data = r.json()
                     res = []
-                    for cm in civ_data.get("items", [])[:6]:
+                    for cm in civ_data.get("items", [])[:10]:
                         model_type = cm.get("type", "").lower()
                         folder_map = {
-                            "lora": "loras", "locon": "loras",
+                            "lora": "loras", "locon": "loras", "dora": "loras",
                             "checkpoint": "checkpoints",
                             "textualinversion": "embeddings",
                             "vae": "vae", "controlnet": "controlnet",
                             "upscaler": "upscale_models",
+                            "unet": "diffusion_models"
                         }
                         folder = folder_map.get(model_type, "loras")
                         versions = cm.get("modelVersions", [])
                         if not versions: continue
-                        latest = versions[0]
-                        version_id = latest.get("id")
-                        files = latest.get("files", [])
-                        primary = next((f for f in files if f.get("primary")), files[0] if files else None)
-                        if primary:
-                            size_kb = primary.get("sizeKB", 0)
-                            mb = size_kb / 1024 if size_kb else 0
-                            size_str = f"{mb/1024:.2f} GB" if mb >= 1024 else (f"{mb:.2f} MB" if mb > 0 else "Unknown")
-                            dl_url = f"https://civitai.com/api/download/models/{version_id}?type=Model&format=SafeTensor"
-                            res.append({
-                                "platform": "civitai",
-                                "name": primary.get("name", f"civitai_{version_id}.safetensors"),
-                                "modelName": cm.get("name", ""),
-                                "author": cm.get("creator", {}).get("username", ""),
-                                "versionId": version_id,
-                                "versionName": latest.get("name", ""),
-                                "url": dl_url,
-                                "size": size_str,
-                                "type": folder,
-                                "downloads": cm.get("stats", {}).get("downloadCount", 0),
-                                "rating": cm.get("stats", {}).get("rating", 0),
-                            })
+
+                        for ver in versions[:4]:
+                            version_id = ver.get("id")
+                            files = ver.get("files", [])
+                            if not files: continue
+
+                            for f in files:
+                                f_name = f.get("name", "")
+                                size_kb = f.get("sizeKB", 0)
+                                mb = size_kb / 1024 if size_kb else 0
+                                size_str = f"{mb/1024:.2f} GB" if mb >= 1024 else (f"{mb:.2f} MB" if mb > 0 else "Unknown")
+                                dl_url = f"https://civitai.com/api/download/models/{version_id}"
+                                if civitai_token:
+                                    dl_url += f"?token={civitai_token}"
+
+                                res.append({
+                                    "platform": "civitai",
+                                    "name": f_name or f"civitai_{version_id}.safetensors",
+                                    "modelName": cm.get("name", ""),
+                                    "author": cm.get("creator", {}).get("username", ""),
+                                    "versionId": version_id,
+                                    "versionName": ver.get("name", ""),
+                                    "url": dl_url,
+                                    "size": size_str,
+                                    "type": folder,
+                                    "downloads": cm.get("stats", {}).get("downloadCount", 0),
+                                    "rating": cm.get("stats", {}).get("rating", 0),
+                                })
                     return res
                 except Exception as e:
                     print(f"[search] CivitAI error for '{q}': {e}")
