@@ -205,43 +205,44 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
           {/* Full Page Extracted Models Table */}
           <div className="sv-card rounded-3xl border border-white/10 overflow-hidden bg-slate-950/80 shadow-2xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300 border-collapse">
+              <table className="w-full text-left text-xs text-slate-300 border-collapse table-fixed">
                 <thead>
                   <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-slate-400 font-bold bg-slate-900/90">
-                    <th className="p-4 w-1/4">Model Filename</th>
-                    <th className="p-4 w-1/5">Target ComfyUI Folder</th>
-                    <th className="p-4 w-1/6">Node Type Signature</th>
-                    <th className="p-4 w-2/5">Direct Download URL</th>
+                    <th className="p-4 w-[240px]">Model Filename</th>
+                    <th className="p-4 w-[180px]">Target ComfyUI Folder</th>
+                    <th className="p-4 w-[220px]">Node Type Signature</th>
+                    <th className="p-4">Direct Download URL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-mono">
                   {filteredItems.map((item) => (
                     <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-bold text-white max-w-[320px]">
+                      <td className="p-4 font-bold text-white w-[240px] truncate" title={item.name}>
                         <input
                           type="text"
                           value={item.name}
+                          title={item.name}
                           onChange={(e) => handleUpdateItemName(item.id, e.target.value)}
-                          className="bg-transparent border-b border-transparent focus:border-cyan-400 outline-none w-full text-white text-xs font-bold py-1"
+                          className="bg-transparent border-b border-transparent focus:border-cyan-400 outline-none w-full text-white text-xs font-bold py-1 truncate"
                         />
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 w-[180px]">
                         <select
                           value={item.folder}
                           onChange={(e) => handleUpdateItemFolder(item.id, e.target.value)}
-                          className="bg-slate-900 text-cyan-300 border border-white/15 rounded-xl px-3 py-1.5 text-xs font-bold"
+                          className="bg-slate-900 text-cyan-300 border border-white/15 rounded-xl px-3 py-1.5 text-xs font-bold w-full"
                         >
                           {COMFYUI_MODEL_FOLDERS.map(f => (
                             <option key={f} value={f}>models/{f}</option>
                           ))}
                         </select>
                       </td>
-                      <td className="p-4">
-                        <span className="text-[11px] bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-white/10 font-bold inline-block">
+                      <td className="p-4 w-[220px]">
+                        <span className="text-[11px] bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-white/10 font-bold inline-block max-w-full truncate" title={item.nodeType}>
                           {item.nodeType}
                         </span>
                       </td>
-                      <td className="p-4 max-w-[600px] truncate">
+                      <td className="p-4 truncate">
                         {item.url ? (
                           <a
                             href={item.url}
