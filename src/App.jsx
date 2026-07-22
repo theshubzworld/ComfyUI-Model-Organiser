@@ -15,6 +15,7 @@ import { calculateStorageBreakdown } from './services/sizeCalculator';
 import { fetchRemoteFileSize } from './services/sizeFetcher';
 import workflowData from './data/workflowsData.json';
 import { useAuth } from './context/AuthContext';
+import { supabase } from './lib/supabase';
 import { normalizeModelFolder } from './data/comfyuiFolders';
 import { detectModelArchitecture, detectWorkflowArchitecture, getSuggestedModelsForWorkflows, ARCHITECTURE_FAMILIES } from './services/architectureMatcher';
 
