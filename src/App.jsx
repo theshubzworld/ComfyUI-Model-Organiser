@@ -17,7 +17,7 @@ import { fetchRemoteFileSize } from './services/sizeFetcher';
 import workflowData from './data/workflowsData.json';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
-import { normalizeModelFolder } from './data/comfyuiFolders';
+import { normalizeModelFolder, guessFolderFromFilename } from './data/comfyuiFolders';
 import { detectModelArchitecture, detectWorkflowArchitecture, getSuggestedModelsForWorkflows, ARCHITECTURE_FAMILIES } from './services/architectureMatcher';
 
 const MASTER_ADMIN_EMAIL = 'shubzveo@gmail.com';
@@ -581,10 +581,11 @@ export default function App() {
       const urlKey = (m.url || '').toLowerCase();
       const key = urlKey || nameKey || m.id;
       if (key && !fullCatalogMap.has(key)) {
+        const modelName = m.name || m.filename || '';
         fullCatalogMap.set(key, {
           id: 'm_' + key,
-          name: m.name || m.filename || '',
-          folder: normalizeModelFolder(m.folder),
+          name: modelName,
+          folder: guessFolderFromFilename(modelName, m.folder),
           url: m.url || '',
           size: m.size || 'Unknown',
           nodeType: m.nodeType || '',
@@ -604,7 +605,7 @@ export default function App() {
           fullCatalogMap.set(key, {
             id: cm.id || 'm_' + key,
             name: cm.name || '',
-            folder: normalizeModelFolder(cm.folder || 'checkpoints'),
+            folder: guessFolderFromFilename(cm.name, cm.folder || 'checkpoints'),
             url: cm.url || '',
             size: cm.size || 'Unknown',
             source: cm.source || 'civitai',

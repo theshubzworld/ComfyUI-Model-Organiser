@@ -243,12 +243,12 @@
   },
   "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors": {
     "name": "ltx-2.3_text_projection_bf16.safetensors",
-    "folder": "clip",
+    "folder": "diffusion_models",
     "size": "2.15 GB"
   },
   "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors": {
     "name": "qwen_3_4b.safetensors",
-    "folder": "text_encoders",
+    "folder": "clip",
     "size": "7.49 GB"
   },
   "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors": {
@@ -696,7 +696,7 @@
   },
   "https://huggingface.co/Alissonerdx/LTX-LoRAs/resolve/main/ltx23_edit_anything_global_rank128_v1_9000steps_adamw.safetensors": {
     "name": "ltx23_edit_anything_global_rank128_v1_9000steps_adamw.safetensors",
-    "folder": "checkpoints",
+    "folder": "diffusion_models",
     "size": "1.22 GB"
   },
   "https://huggingface.co/Alissonerdx/flux.1-dev-SRPO-LoRas/resolve/main/srpo_32_base_RockerBOO_model_fp16.safetensors": {
@@ -861,7 +861,7 @@
   },
   "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors": {
     "name": "ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",
-    "folder": "checkpoints",
+    "folder": "diffusion_models",
     "size": "23.49 GB"
   },
   "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors": {
@@ -1641,7 +1641,7 @@
   },
   "https://huggingface.co/valiantcat/LTX-2.3-Transition-LORA/resolve/main/ltx2.3-transition.safetensors": {
     "name": "ltx2.3-transition.safetensors",
-    "folder": "checkpoints",
+    "folder": "diffusion_models",
     "size": "372.15 MB"
   },
   "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/OtherLoRa's/DetailEnhancerV1.safetensors": {
@@ -1813,6 +1813,6 @@
   "https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors": {
     "size": "8.79 GB",
     "name": "flux-2-klein-9b-fp8.safetensors",
-    "folder": "checkpoints"
+    "folder": "diffusion_models"
   }
 }
