@@ -22,6 +22,16 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   const urlRegex = /https?:\/\/[^\s"']+/gi;
   const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt', '.sft'];
   const ignoredExtensions = ['.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.flac', '.ogg', '.m4a', '.txt', '.json', '.html', '.css', '.js', '.py'];
+  const ignoredNodeTypes = [
+    'vhs_videocombine', 'vhs_loadvideo', 'loadvideo', 'savevideo', 'loadimage', 
+    'saveimage', 'previewimage', 'vhs_loadimages', 'vhs_loadimagespath', 
+    'saveimagewebp', 'animatedpng', 'note', 'markdown', 'displaytext'
+  ];
+
+  const isMediaNode = (type) => {
+    const t = toStr(type).toLowerCase();
+    return ignoredNodeTypes.some(ignored => t.includes(ignored));
+  };
 
   const isModelFileOrUrl = (url, filename) => {
     const urlLower = toStr(url).toLowerCase();
@@ -60,6 +70,9 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   };
 
   const processNodeData = (nodeType, inputsOrWidgets, properties = {}) => {
+    // 0. Skip media output / video / image / note nodes completely!
+    if (isMediaNode(nodeType)) return;
+
     // 1. Scan properties models array
     if (properties && properties.models && Array.isArray(properties.models)) {
       properties.models.forEach(m => {
@@ -163,6 +176,13 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   results.forEach(r => {
     const urlStr = toStr(r.url);
     const nameStr = toStr(r.name);
+    const nameLower = nameStr.toLowerCase();
+
+    // Guard: ignore any filename that ends with media extensions (.mp4, .webm, .png, etc.)
+    if (ignoredExtensions.some(ext => nameLower.endsWith(ext) || urlStr.split('?')[0].toLowerCase().endsWith(ext))) {
+      return;
+    }
+
     const key = (urlStr || nameStr).toLowerCase();
     if (key && !dedupped.has(key)) {
       dedupped.set(key, {
