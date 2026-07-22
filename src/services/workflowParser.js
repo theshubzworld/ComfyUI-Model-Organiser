@@ -197,10 +197,17 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           if (!filename) filename = getFilenameFromUrl(url);
 
           if (isModelFileOrUrl(url, filename)) {
+            // BUG FIX: If the line explicitly provides a folder, ALWAYS trust it.
+            // Only fall back to guessFolderFromFilename when no folder was given.
+            const resolvedFolder = folder
+              ? normalizeModelFolder(folder)
+              : guessFolderFromFilename(filename, 'checkpoints');
+
             results.push({
               name: filename,
               url: url,
-              folder: guessFolderFromNode(nodeType, filename, folder),
+              folder: resolvedFolder,
+              explicitFolder: Boolean(folder), // flag so deduplication respects it
               nodeType: toStr(nodeType) || 'Downloader Node'
             });
           }
@@ -323,17 +330,24 @@ export function extractLinksFromWorkflowJson(jsonObj) {
     const urlFileName = getFilenameFromUrl(item.url) || item.name;
     const nameKey = (urlFileName || item.name || item.url).toLowerCase();
     
+    // BUG FIX: Preserve explicit folder — do NOT re-run guessFolderFromNode which would override it.
+    const resolvedFolder = item.explicitFolder
+      ? item.folder
+      : guessFolderFromNode(item.nodeType, urlFileName || item.name, item.folder);
+
     if (!finalMap.has(nameKey)) {
       finalMap.set(nameKey, {
         id: 'extracted_' + Math.random().toString(36).substring(2, 9),
-        name: urlFileName || item.name,
+        name: item.name && item.name !== urlFileName ? item.name : urlFileName,
         url: item.url,
-        folder: guessFolderFromNode(item.nodeType, urlFileName || item.name, item.folder),
+        folder: resolvedFolder,
         nodeType: toStr(item.nodeType) || 'Downloader Node',
         size: 'Unknown'
       });
     } else {
       const existing = finalMap.get(nameKey);
+      // If new item has an explicit folder, update the folder
+      if (item.explicitFolder) existing.folder = resolvedFolder;
       if (item.nodeType && !existing.nodeType.includes(item.nodeType)) {
         existing.nodeType += ` / ${item.nodeType}`;
       }

@@ -37,8 +37,14 @@ export function guessFolderFromFilename(filename = '', defaultType = 'checkpoint
     return 'vae';
   }
   
-  // 2. LoRA / LoCon / DoRA / Lightning -> models/loras
-  if (f.includes('lora') || f.includes('locon') || f.includes('dora') || f.includes('slider') || f.includes('lightning')) {
+  // 2. LoRA / LoCon / DoRA -> models/loras
+  // BUG FIX: 'lightning' only matches loras when filename also contains lora-like keywords,
+  // NOT when it's a checkpoint like 'realvisxlV40_v40LightningBakedvae'
+  if (f.includes('lora') || f.includes('locon') || f.includes('dora') || f.includes('slider')) {
+    return 'loras';
+  }
+  // Lightning LoRA: must have 'lightning' AND a lora-indicating keyword
+  if (f.includes('lightning') && (f.includes('lora') || f.includes('step') || f.includes('rank'))) {
     return 'loras';
   }
 
@@ -52,7 +58,12 @@ export function guessFolderFromFilename(filename = '', defaultType = 'checkpoint
     return f.includes('insightface') ? 'insightface' : 'sams';
   }
   
-  // 5. Upscale Models -> models/upscale_models
+  // 5. IP-Adapter -> models/ipadapter
+  if (f.includes('ip-adapter') || f.includes('ip_adapter') || f.includes('ipadapter')) {
+    return 'ipadapter';
+  }
+
+  // 6. Upscale Models -> models/upscale_models
   if (f.includes('upscale') || f.includes('esrgan') || f.includes('spandrel') || f.includes('realesrgan')) {
     return 'upscale_models';
   }
