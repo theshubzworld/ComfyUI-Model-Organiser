@@ -1,8 +1,13 @@
-# ========================================================
-# SIMPLEPOD MASTER COMFYUI MODEL DOWNLOAD LIST
-# Updated via Verified ComfyUI Model Directory Mappings
-# ========================================================
+"""
+Ingest verified model links, target folders, and custom target filenames.
+Updates master-model-list.txt, workflowsData.json, and Supabase DB tables.
+"""
+import os
+import re
+import json
+import psycopg2
 
+VERIFIED_LIST_TEXT = """
 # ==========================================
 # CHECKPOINTS
 # ==========================================
@@ -438,3 +443,95 @@ https://huggingface.co/alibaba-pai/Wan2.1-Fun-Reward-LoRAs/resolve/main/Wan2.1-F
 https://huggingface.co/alibaba-pai/Wan2.2-Fun-Reward-LoRAs/resolve/main/Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors wan
 https://huggingface.co/lightx2v/Wan2.2-Lightning/resolve/main/Wan2.2-T2V-A14B-4steps-lora-250928/low_noise_model.safetensors wan Wan2.2-T2V-A14B-4steps-lora-250928.safetensors
 https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/OtherLoRa's/Wan14B_RealismBoost.safetensors wan
+"""
+
+# 1. Update data/master-model-list.txt
+TXT_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "master-model-list.txt")
+
+header = "# ========================================================\n# SIMPLEPOD MASTER COMFYUI MODEL DOWNLOAD LIST\n# Updated via Verified ComfyUI Model Directory Mappings\n# ========================================================\n\n"
+
+with open(TXT_PATH, "w", encoding="utf-8") as f:
+    f.write(header + VERIFIED_LIST_TEXT.strip() + "\n")
+
+print("Successfully updated master-model-list.txt with 165+ verified model links & directory mappings.")
+
+# 2. Update workflowsData.json catalog & workflows models
+JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "data", "workflowsData.json")
+
+# Build mapping of clean_url -> { folder, custom_name }
+url_map = {}
+for line in VERIFIED_LIST_TEXT.strip().splitlines():
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    parts = line.split(None, 2)
+    if len(parts) >= 2 and parts[0].startswith("http"):
+        url = parts[0].replace("civitai.red", "civitai.com").split("?")[0]
+        folder = parts[1]
+        custom_name = parts[2] if len(parts) > 2 else ""
+        url_map[url] = { "folder": folder, "custom_name": custom_name }
+
+if os.path.exists(JSON_PATH):
+    with open(JSON_PATH, "r", encoding="utf-8") as f:
+        wf_data = json.load(f)
+
+    updated_cat = 0
+    updated_wf = 0
+
+    for item in wf_data.get("catalog", []):
+        u = item.get("url", "").split("?")[0]
+        if u in url_map:
+            info = url_map[u]
+            item["folder"] = info["folder"]
+            if info["custom_name"]:
+                item["name"] = info["custom_name"]
+            updated_cat += 1
+
+    for wf in wf_data.get("workflows", []):
+        for item in wf.get("models", []):
+            u = item.get("url", "").split("?")[0]
+            if u in url_map:
+                info = url_map[u]
+                item["folder"] = info["folder"]
+                if info["custom_name"]:
+                    item["name"] = info["custom_name"]
+                updated_wf += 1
+
+    with open(JSON_PATH, "w", encoding="utf-8") as f:
+        json.dump(wf_data, f, indent=2)
+
+    print(f"Updated workflowsData.json: {updated_cat} catalog items and {updated_wf} workflow models matched.")
+
+# 3. Update Supabase Database
+password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+
+try:
+    conn = psycopg2.connect(
+        host=os.getenv('SUPABASE_DB_HOST', 'db.fgrmbmltnqinmtgzrbpi.supabase.co'),
+        port=int(os.getenv('SUPABASE_DB_PORT', 5432)),
+        dbname=os.getenv('SUPABASE_DB_NAME', 'postgres'),
+        user=os.getenv('SUPABASE_DB_USER', 'postgres'),
+        password=password,
+        sslmode='require',
+        connect_timeout=15
+    )
+    cur = conn.cursor()
+
+    supa_updates = 0
+    for u, info in url_map.items():
+        cur.execute(
+            "UPDATE public.model_cache SET folder = %s, name = COALESCE(NULLIF(%s, ''), name) WHERE clean_url LIKE %s;",
+            (info["folder"], info["custom_name"], f"{u}%")
+        )
+        cur.execute(
+            "UPDATE public.model_list SET folder = %s, name = COALESCE(NULLIF(%s, ''), name) WHERE url LIKE %s;",
+            (info["folder"], info["custom_name"], f"{u}%")
+        )
+        supa_updates += cur.rowcount
+
+    conn.commit()
+    print(f"Database updated with {supa_updates} records matched from verified list.")
+    cur.close()
+    conn.close()
+except Exception as e:
+    print("Database sync error:", type(e).__name__, str(e))

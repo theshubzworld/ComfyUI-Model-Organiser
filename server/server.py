@@ -272,7 +272,9 @@ def parse_model_list_txt(filepath=MODEL_LIST_TXT):
             model_size = cached_entry.get("size", "Unknown")
             cached_name = cached_entry.get("name", "")
 
-            if cached_name:
+            if custom_name:
+                filename = custom_name
+            elif cached_name:
                 filename = cached_name
             else:
                 # Resolve real filename from CivitAI API if filename is pure numeric ID or starts with civitai_
