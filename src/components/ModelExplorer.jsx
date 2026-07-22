@@ -764,13 +764,13 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
                           {model.stats?.downloadCount > 0 && (
                             <span className="flex items-center gap-1 text-slate-400">
                               <Download className="w-3 h-3" />
-                              {(model.stats.downloadCount).toLocaleString()}
+                              {(model.stats?.downloadCount || 0).toLocaleString()}
                             </span>
                           )}
                           {model.stats?.thumbsUpCount > 0 && (
                             <span className="flex items-center gap-1 text-blue-400">
                               <ThumbsUp className="w-3 h-3" />
-                              {(model.stats.thumbsUpCount).toLocaleString()}
+                              {(model.stats?.thumbsUpCount || 0).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -778,10 +778,10 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
                         <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
                           <span className="flex items-center gap-1 text-slate-400">
                             <Download className="w-3 h-3" />
-                            {model.downloads.toLocaleString()}
+                            {(model.downloads || 0).toLocaleString()}
                           </span>
                           <span className="flex items-center gap-1 text-amber-400">
-                            ★ {model.likes.toLocaleString()}
+                            ★ {(model.likes || 0).toLocaleString()}
                           </span>
                         </div>
                       )}
