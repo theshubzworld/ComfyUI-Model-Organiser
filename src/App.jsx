@@ -607,8 +607,22 @@ export default function App() {
     return list;
   }, [workflows, selectedWorkflowIds, civitaiModels, customModels, modelOverrides]);
 
+  const isModelRemoved = (m, overrides) => {
+    if (!m || !overrides) return false;
+    if (m.id && overrides[m.id]?.isRemoved) return true;
+    if (m.name && overrides[m.name]?.isRemoved) return true;
+    if (m.name && overrides[m.name.toLowerCase()]?.isRemoved) return true;
+    if (m.url) {
+      if (overrides[m.url]?.isRemoved) return true;
+      if (overrides[m.url.toLowerCase()]?.isRemoved) return true;
+      const cKey = m.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '').toLowerCase();
+      if (cKey && overrides[cKey]?.isRemoved) return true;
+    }
+    return false;
+  };
+
   const activeModelsFiltered = useMemo(() => {
-    return activeModelsList.filter(m => !modelOverrides[m.id]?.isRemoved);
+    return activeModelsList.filter(m => !isModelRemoved(m, modelOverrides));
   }, [activeModelsList, modelOverrides]);
 
   // Auto-resolve CivitAI model names if they are numeric IDs or civitai_* (guarded against re-render loops)
@@ -973,13 +987,39 @@ export default function App() {
   };
 
 
-  const handleRemoveModel = useCallback((id) => {
-    setCustomModels(prev => prev.filter(m => m.id !== id));
-    setModelOverrides(prev => {
-      const next = { ...prev, [id]: { ...(prev[id] || {}), isRemoved: true } };
+  const handleRemoveModel = useCallback((modelId) => {
+    const target = activeModelsList.find(m => m.id === modelId || m.name === modelId || m.url === modelId);
+
+    // 1. Remove from local state arrays
+    setCustomModels(prev => prev.filter(m => m.id !== modelId && m.name !== modelId && m.url !== modelId));
+    setCivitaiModels(prev => {
+      const next = prev.filter(m => m.id !== modelId && m.name !== modelId && m.url !== modelId);
+      try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(next)); } catch {}
       return next;
     });
-  }, []);
+
+    // 2. Mark removed in modelOverrides across all identifying keys (id, name, url)
+    const newOverrides = {};
+    if (modelId) newOverrides[modelId] = { isRemoved: true };
+    if (target) {
+      if (target.id) newOverrides[target.id] = { isRemoved: true };
+      if (target.name) {
+        newOverrides[target.name] = { isRemoved: true };
+        newOverrides[target.name.toLowerCase()] = { isRemoved: true };
+      }
+      if (target.url) {
+        newOverrides[target.url] = { isRemoved: true };
+        newOverrides[target.url.toLowerCase()] = { isRemoved: true };
+        const cKey = target.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '').toLowerCase();
+        if (cKey) newOverrides[cKey] = { isRemoved: true };
+      }
+    }
+
+    setModelOverrides(prev => ({
+      ...prev,
+      ...newOverrides
+    }));
+  }, [activeModelsList]);
 
   const handleAddModel = (newModel) => {
     setCustomModels(prev => [newModel, ...prev]);
