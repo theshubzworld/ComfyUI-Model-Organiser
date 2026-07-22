@@ -611,13 +611,17 @@ export default function App() {
 
   const isModelRemoved = (m, overrides) => {
     if (!m || !overrides) return false;
-    if (m.id && overrides[m.id]?.isRemoved) return true;
-    if (m.name && overrides[m.name]?.isRemoved) return true;
-    if (m.name && overrides[m.name.toLowerCase()]?.isRemoved) return true;
-    if (m.url) {
-      if (overrides[m.url]?.isRemoved) return true;
-      if (overrides[m.url.toLowerCase()]?.isRemoved) return true;
-      const cKey = m.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '').toLowerCase();
+    const mId = typeof m.id === 'string' ? m.id : '';
+    const mName = typeof m.name === 'string' ? m.name : '';
+    const mUrl = typeof m.url === 'string' ? m.url : '';
+
+    if (mId && overrides[mId]?.isRemoved) return true;
+    if (mName && overrides[mName]?.isRemoved) return true;
+    if (mName && overrides[mName.toLowerCase()]?.isRemoved) return true;
+    if (mUrl) {
+      if (overrides[mUrl]?.isRemoved) return true;
+      if (overrides[mUrl.toLowerCase()]?.isRemoved) return true;
+      const cKey = mUrl.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '').toLowerCase();
       if (cKey && overrides[cKey]?.isRemoved) return true;
     }
     return false;
@@ -636,9 +640,11 @@ export default function App() {
     // Group URLs by name to find conflicts (same name, different URLs)
     const nameUrls = {};
     activeModelsFiltered.forEach(m => {
-      if (m.name && m.url) {
-        if (!nameUrls[m.name]) nameUrls[m.name] = new Set();
-        nameUrls[m.name].add(m.url.split('?')[0]);
+      const name = typeof m.name === 'string' ? m.name : '';
+      const url = typeof m.url === 'string' ? m.url : '';
+      if (name && url) {
+        if (!nameUrls[name]) nameUrls[name] = new Set();
+        nameUrls[name].add(url.split('?')[0]);
       }
     });
 

@@ -3,6 +3,13 @@
  */
 import { normalizeModelFolder } from '../data/comfyuiFolders';
 
+const toStr = (v) => {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return '';
+};
+
 /**
  * Deep scan and extract all download links, filenames, node types, and folders from any workflow JSON
  */
@@ -15,7 +22,9 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   const urlRegex = /https?:\/\/[^\s"']+/gi;
   const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt'];
 
-  const getFilenameFromUrl = (url) => {
+  const getFilenameFromUrl = (rawUrl) => {
+    const url = toStr(rawUrl);
+    if (!url) return '';
     try {
       const u = new URL(url);
       const parts = u.pathname.split('/').filter(Boolean);
@@ -24,21 +33,22 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         return decodeURIComponent(last.split('?')[0]);
       }
     } catch (_) {}
-    return url.split('/').pop().split('?')[0];
+    return url.split('/').pop().split('?')[0] || '';
   };
 
   const processNodeData = (nodeType, inputsOrWidgets, properties = {}) => {
     // 1. Scan properties models array
-    if (properties.models && Array.isArray(properties.models)) {
+    if (properties && properties.models && Array.isArray(properties.models)) {
       properties.models.forEach(m => {
-        if (m.url || m.name) {
-          const url = m.url || '';
-          const name = m.name || (url ? getFilenameFromUrl(url) : '');
+        if (!m) return;
+        const url = toStr(m.url);
+        const name = toStr(m.name || m.filename) || (url ? getFilenameFromUrl(url) : '');
+        if (name || url) {
           results.push({
             name: name,
             url: url,
-            folder: normalizeModelFolder(m.directory || guessFolderFromNode(nodeType, name)),
-            nodeType: nodeType
+            folder: normalizeModelFolder(toStr(m.directory) || guessFolderFromNode(nodeType, name)),
+            nodeType: toStr(nodeType)
           });
         }
       });
@@ -59,7 +69,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
               name: filename,
               url: cleanUrl,
               folder: guessFolderFromNode(nodeType || keyHint, filename),
-              nodeType: nodeType || 'Downloader Node'
+              nodeType: toStr(nodeType) || 'Downloader Node'
             });
           });
         } else {
@@ -71,20 +81,25 @@ export function extractLinksFromWorkflowJson(jsonObj) {
               name: filename,
               url: '',
               folder: guessFolderFromNode(nodeType || keyHint, filename),
-              nodeType: nodeType || 'Loader Node'
+              nodeType: toStr(nodeType) || 'Loader Node'
             });
           }
         }
       } else if (typeof val === 'object') {
-        if (val.url || val.link || val.download_url) {
-          const url = val.url || val.link || val.download_url;
-          const name = val.name || val.filename || getFilenameFromUrl(url);
-          results.push({
-            name: name,
-            url: url,
-            folder: normalizeModelFolder(val.folder || guessFolderFromNode(nodeType, name)),
-            nodeType: nodeType || 'Downloader Node'
-          });
+        const rawUrl = toStr(val.url || val.link || val.download_url);
+        const rawName = toStr(val.name || val.filename || val.model_name);
+
+        if (rawUrl || rawName) {
+          const url = rawUrl;
+          const name = rawName || getFilenameFromUrl(url);
+          if (name || url) {
+            results.push({
+              name: name,
+              url: url,
+              folder: normalizeModelFolder(toStr(val.folder) || guessFolderFromNode(nodeType, name)),
+              nodeType: toStr(nodeType) || 'Downloader Node'
+            });
+          }
         } else {
           Object.entries(val).forEach(([k, v]) => scanValue(v, k));
         }
@@ -93,7 +108,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
 
     if (Array.isArray(inputsOrWidgets)) {
       inputsOrWidgets.forEach(w => scanValue(w));
-    } else if (typeof inputsOrWidgets === 'object') {
+    } else if (inputsOrWidgets && typeof inputsOrWidgets === 'object') {
       Object.entries(inputsOrWidgets).forEach(([k, v]) => scanValue(v, k));
     }
   };
@@ -101,10 +116,12 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   // Check UI Graph format: jsonObj.nodes
   if (Array.isArray(jsonObj.nodes)) {
     jsonObj.nodes.forEach(node => {
+      if (!node) return;
       processNodeData(node.type || node.class_type || '', node.widgets_values || node.inputs || {}, node.properties || {});
     });
   } else if (Array.isArray(jsonObj)) {
     jsonObj.forEach(node => {
+      if (!node) return;
       processNodeData(node.type || node.class_type || '', node.widgets_values || node.inputs || {}, node.properties || {});
     });
   } else {
@@ -119,14 +136,16 @@ export function extractLinksFromWorkflowJson(jsonObj) {
   // Deduplicate extracted items by URL or Name
   const dedupped = new Map();
   results.forEach(r => {
-    const key = (r.url || r.name).toLowerCase();
+    const urlStr = toStr(r.url);
+    const nameStr = toStr(r.name);
+    const key = (urlStr || nameStr).toLowerCase();
     if (key && !dedupped.has(key)) {
       dedupped.set(key, {
         id: 'extracted_' + Math.random().toString(36).substring(2, 9),
-        name: r.name || 'unnamed_model',
-        url: r.url || '',
+        name: nameStr || 'unnamed_model',
+        url: urlStr,
         folder: normalizeModelFolder(r.folder || 'checkpoints'),
-        nodeType: r.nodeType || 'Node',
+        nodeType: toStr(r.nodeType) || 'Node',
         size: 'Unknown'
       });
     }
@@ -144,20 +163,30 @@ export function parseComfyUIWorkflow(jsonObj, catalog = []) {
 
   // Enrich extracted models with catalog metadata
   const catalogMap = new Map();
-  catalog.forEach(item => {
-    if (item.name) catalogMap.set(item.name.toLowerCase(), item);
-    if (item.url) {
-      const baseName = item.url.split('/').pop().toLowerCase();
-      catalogMap.set(baseName, item);
+  (Array.isArray(catalog) ? catalog : []).forEach(item => {
+    if (!item) return;
+    const nameStr = toStr(item.name).toLowerCase();
+    if (nameStr) catalogMap.set(nameStr, item);
+
+    const urlStr = toStr(item.url);
+    if (urlStr) {
+      const baseName = urlStr.split('/').pop().toLowerCase();
+      if (baseName) catalogMap.set(baseName, item);
     }
   });
 
   return extracted.map(m => {
-    const matched = catalogMap.get(m.name.toLowerCase()) || (m.url ? catalogMap.get(m.url.split('/').pop().toLowerCase()) : {}) || {};
+    const mName = toStr(m.name).toLowerCase();
+    const mUrl = toStr(m.url);
+    const urlBase = mUrl ? mUrl.split('/').pop().toLowerCase() : '';
+
+    const matched = (mName ? catalogMap.get(mName) : null) || (urlBase ? catalogMap.get(urlBase) : null) || {};
+
     return {
       ...m,
-      url: m.url || matched.url || '',
-      size: m.size && m.size !== 'Unknown' ? m.size : (matched.size || 'Unknown'),
+      name: m.name || matched.name || 'unnamed_model',
+      url: mUrl || toStr(matched.url),
+      size: m.size && m.size !== 'Unknown' ? m.size : (toStr(matched.size) || 'Unknown'),
       folder: normalizeModelFolder(m.folder || matched.folder || 'checkpoints'),
       source: 'workflow'
     };
@@ -165,12 +194,14 @@ export function parseComfyUIWorkflow(jsonObj, catalog = []) {
 }
 
 export function parseTextDownloadList(text, catalog = []) {
-  const lines = text.split('\n');
+  const lines = toStr(text).split('\n');
   const items = [];
 
   const catalogMap = new Map();
-  catalog.forEach(item => {
-    if (item.name) catalogMap.set(item.name.toLowerCase(), item);
+  (Array.isArray(catalog) ? catalog : []).forEach(item => {
+    if (!item) return;
+    const nameStr = toStr(item.name).toLowerCase();
+    if (nameStr) catalogMap.set(nameStr, item);
   });
 
   lines.forEach(line => {
@@ -200,8 +231,8 @@ export function parseTextDownloadList(text, catalog = []) {
 }
 
 export function guessFolderFromNode(nodeType, filename) {
-  const type = (nodeType || '').toLowerCase();
-  const file = (filename || '').toLowerCase();
+  const type = toStr(nodeType).toLowerCase();
+  const file = toStr(filename).toLowerCase();
 
   if (type.includes('vae') || file.includes('vae')) return 'vae';
   if (type.includes('clip') || type.includes('text') || file.includes('clip') || file.includes('t5') || file.includes('text_encoder')) return 'clip';
