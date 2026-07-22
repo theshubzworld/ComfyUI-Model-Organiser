@@ -16,7 +16,7 @@ import { fetchRemoteFileSize } from './services/sizeFetcher';
 import workflowData from './data/workflowsData.json';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
-import { normalizeModelFolder } from './data/comfyuiFolders';
+import { detectModelArchitecture, detectWorkflowArchitecture, getSuggestedModelsForWorkflows, ARCHITECTURE_FAMILIES } from './services/architectureMatcher';
 
 const MASTER_ADMIN_EMAIL = 'shubzveo@gmail.com';
 
@@ -29,15 +29,20 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Pre-select popular image & video workflows by default
+  // Pre-select essential starter workflows on fresh load (SDXL, WAN 2.2, LTX-2.3)
   const [selectedWorkflowIds, setSelectedWorkflowIds] = useState(() => {
-    return (workflowData.workflows || [])
-      .filter(wf => wf.category === '0-IMAGE' || wf.category === '2-VIDEO')
-      .map(wf => wf.id);
+    const all = workflowData.workflows || [];
+    const starters = all.filter(wf => {
+      const n = (wf.name || '').toLowerCase();
+      return n.includes('sdxl') || n.includes('wan') || n.includes('ltx');
+    }).slice(0, 3).map(wf => wf.id);
+    return starters.length ? starters : all.slice(0, 2).map(wf => wf.id);
   });
 
   const [storageQuotaGB, setStorageQuotaGB] = useState(80);
   const [activeFolderFilter, setActiveFolderFilter] = useState('all');
+  const [modelViewMode, setModelViewMode] = useState('direct'); // 'direct' | 'suggested'
+  const [selectedArchitectureFamily, setSelectedArchitectureFamily] = useState('all');
 
   // Theme Management (Dark vs Light)
   const [theme, setTheme] = useState(() => {
@@ -508,80 +513,100 @@ export default function App() {
 
 
   const activeModelsList = useMemo(() => {
-    const modelsMap = new Map();
-
     const selectedWfs = workflows.filter(wf => selectedWorkflowIds.includes(wf.id));
     
-    selectedWfs.forEach(wf => {
-      (wf.models || []).forEach(m => {
-        const nameKey = (m.name || m.filename || '').toLowerCase();
-        const urlKey = (m.url || '').toLowerCase();
-        const key = urlKey || nameKey || m.id;
-        if (key && !modelsMap.has(key)) {
-          modelsMap.set(key, {
-            id: 'm_' + key,
-            name: m.name || m.filename || '',
-            folder: normalizeModelFolder(m.folder),
-            url: m.url || '',
-            size: m.size || 'Unknown',
-            nodeType: m.nodeType || '',
-            source: wf.name,
-            catalogOrigin: 'master'
-          });
-        }
-      });
-    });
+    // 1. Build full catalog map across all sources (workflow models, civitai, community, custom)
+    const fullCatalogMap = new Map();
 
-    // Merge civitai models / master list models — preserve all unique URLs & attach URLs to unlinked workflow models
-    civitaiModels.forEach(cm => {
-      const urlKey = cm.url ? cm.url.toLowerCase() : '';
-      const nameKey = cm.name ? cm.name.toLowerCase() : '';
-
-      // If a model with same filename exists without a download URL, attach this URL!
-      if (nameKey && modelsMap.has(nameKey)) {
-        const existing = modelsMap.get(nameKey);
-        if (!existing.url && cm.url) {
-          existing.url = cm.url;
-          if (cm.size && cm.size !== 'Unknown') existing.size = cm.size;
-        }
-      }
-
-      const key = urlKey || (nameKey && !['lenovo.safetensors', 'model.safetensors'].includes(nameKey) ? nameKey : '') || cm.id;
-
-      if (key && !modelsMap.has(key)) {
-        modelsMap.set(key, {
-          id: cm.id || 'm_' + key,
-          name: cm.name || '',
-          folder: normalizeModelFolder(cm.folder || 'checkpoints'),
-          url: cm.url || '',
-          size: cm.size || 'Unknown',
-          source: cm.source || 'file',
+    (workflows || []).flatMap(wf => wf.models || []).forEach(m => {
+      const nameKey = (m.name || m.filename || '').toLowerCase();
+      const urlKey = (m.url || '').toLowerCase();
+      const key = urlKey || nameKey || m.id;
+      if (key && !fullCatalogMap.has(key)) {
+        fullCatalogMap.set(key, {
+          id: 'm_' + key,
+          name: m.name || m.filename || '',
+          folder: normalizeModelFolder(m.folder),
+          url: m.url || '',
+          size: m.size || 'Unknown',
+          nodeType: m.nodeType || '',
+          source: 'workflow catalog',
           catalogOrigin: 'master'
         });
       }
     });
 
-    // Merge Public Community Shared Models from other users
+    civitaiModels.forEach(cm => {
+      const urlKey = cm.url ? cm.url.toLowerCase() : '';
+      const nameKey = cm.name ? cm.name.toLowerCase() : '';
+      const key = urlKey || (nameKey && !['lenovo.safetensors', 'model.safetensors'].includes(nameKey) ? nameKey : '') || cm.id;
+      if (key && !fullCatalogMap.has(key)) {
+        fullCatalogMap.set(key, {
+          id: cm.id || 'm_' + key,
+          name: cm.name || '',
+          folder: normalizeModelFolder(cm.folder || 'checkpoints'),
+          url: cm.url || '',
+          size: cm.size || 'Unknown',
+          source: cm.source || 'civitai',
+          catalogOrigin: 'master'
+        });
+      }
+    });
+
     communityModels.forEach(cm => {
       const key = (cm.url || cm.name || cm.id || '').toLowerCase();
-      if (key && !modelsMap.has(key)) {
-        modelsMap.set(key, {
+      if (key && !fullCatalogMap.has(key)) {
+        fullCatalogMap.set(key, {
           ...cm,
           catalogOrigin: 'community'
         });
       }
     });
 
-    // Custom user models always win (added last, override everything)
     customModels.forEach(cm => {
       const key = (cm.url || cm.name || cm.id || '').toLowerCase();
-      if (key) modelsMap.set(key, {
-        ...cm,
-        catalogOrigin: 'personal'
-      });
+      if (key) {
+        fullCatalogMap.set(key, {
+          ...cm,
+          catalogOrigin: 'personal'
+        });
+      }
     });
 
-    const list = Array.from(modelsMap.values()).map(m => {
+    const allCatalogList = Array.from(fullCatalogMap.values());
+
+    // 2. Filter base list based on modelViewMode ('direct' vs 'suggested')
+    let baseList = [];
+    if (modelViewMode === 'suggested') {
+      baseList = getSuggestedModelsForWorkflows(selectedWfs, allCatalogList);
+    } else {
+      // Direct Mode: only models belonging to selected workflows (plus custom/community matches)
+      const directMap = new Map();
+      selectedWfs.forEach(wf => {
+        (wf.models || []).forEach(m => {
+          const nameKey = (m.name || m.filename || '').toLowerCase();
+          const urlKey = (m.url || '').toLowerCase();
+          const key = urlKey || nameKey || m.id;
+          if (key && !directMap.has(key)) {
+            const matched = fullCatalogMap.get(key) || fullCatalogMap.get(urlKey) || fullCatalogMap.get(nameKey);
+            directMap.set(key, matched || {
+              id: 'm_' + key,
+              name: m.name || m.filename || '',
+              folder: normalizeModelFolder(m.folder),
+              url: m.url || '',
+              size: m.size || 'Unknown',
+              nodeType: m.nodeType || '',
+              source: wf.name,
+              catalogOrigin: 'master'
+            });
+          }
+        });
+      });
+      baseList = Array.from(directMap.values());
+    }
+
+    // 3. Merge user overrides & detect architecture families
+    let list = baseList.map(m => {
       const merged = modelOverrides[m.id] ? { ...m, ...modelOverrides[m.id] } : { ...m };
       let cleanName = String(merged.name || '').trim()
         .replace(/^(UTF-8|utf-8|utf8|UTF8)['"%27]*['"%27]*/gi, '')
@@ -599,15 +624,23 @@ export default function App() {
         } catch (_) {}
       }
 
+      const architectureFamily = detectModelArchitecture(merged);
+
       return {
         ...merged,
         name: cleanName || m.name || '',
         folder: normalizeModelFolder(merged.folder || m.folder),
+        architectureFamily: architectureFamily
       };
     });
 
+    // 4. Apply selectedArchitectureFamily filter pill if set
+    if (selectedArchitectureFamily && selectedArchitectureFamily !== 'all') {
+      list = list.filter(m => m.architectureFamily === selectedArchitectureFamily);
+    }
+
     return list;
-  }, [workflows, selectedWorkflowIds, civitaiModels, customModels, modelOverrides]);
+  }, [workflows, selectedWorkflowIds, civitaiModels, communityModels, customModels, modelOverrides, modelViewMode, selectedArchitectureFamily]);
 
   const isModelRemoved = (m, overrides) => {
     if (!m || !overrides) return false;

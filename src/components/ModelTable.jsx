@@ -2,10 +2,11 @@ import React, { useState, useMemo, memo, useCallback } from 'react';
 import { 
   Folder, Link, Trash2, Edit2, Copy, Plus, 
   Check, AlertCircle, Search, RefreshCw, Save,
-  ChevronDown, ChevronRight, LayoutGrid, List, HardDrive, Filter, Wrench, Tag, RotateCcw, Sliders
+  ChevronDown, ChevronRight, LayoutGrid, List, HardDrive, Filter, Wrench, Tag, RotateCcw, Sliders, Sparkles
 } from 'lucide-react';
 import { getCategoryBadgeColor, parseSizeToMB, formatMB } from '../services/sizeCalculator';
 import { COMFYUI_MODEL_FOLDERS } from '../data/comfyuiFolders';
+import { ARCHITECTURE_FAMILIES } from '../services/architectureMatcher';
 
 export const ModelTable = memo(function ModelTable({ 
   modelsList, 
@@ -21,6 +22,10 @@ export const ModelTable = memo(function ModelTable({
   onOpenSearch,
   onOpenLinkAnalyzer,
   onTogglePublicModel,
+  modelViewMode = 'direct',
+  setModelViewMode,
+  selectedArchitectureFamily = 'all',
+  setSelectedArchitectureFamily
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -522,6 +527,62 @@ export const ModelTable = memo(function ModelTable({
             <span>Search Models</span>
           </button>
         </div>
+      </div>
+
+      {/* ── DUAL MODEL SELECTION MODE & ARCHITECTURE FAMILY FILTER BAR ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-3 rounded-2xl border border-white/10 shadow-lg">
+        {/* Mode Switcher */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> Mode:
+          </span>
+          {setModelViewMode && (
+            <div className="inline-flex rounded-xl p-1 bg-slate-900 border border-white/10">
+              <button
+                onClick={() => setModelViewMode('direct')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  modelViewMode === 'direct'
+                    ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Only show models directly used in selected workflow JSONs"
+              >
+                <span>⚡ Direct JSON Models</span>
+              </button>
+              <button
+                onClick={() => setModelViewMode('suggested')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  modelViewMode === 'suggested'
+                    ? 'bg-amber-400 text-slate-950 font-extrabold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Suggest all matching UNets, LoRAs, CLIPs & VAEs from CivitAI catalog for active workflow architectures"
+              >
+                <span>💡 Smart Family Suggestions</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Architecture Family Pills */}
+        {setSelectedArchitectureFamily && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Family:</span>
+            {ARCHITECTURE_FAMILIES.map(fam => (
+              <button
+                key={fam.id}
+                onClick={() => setSelectedArchitectureFamily(fam.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                  selectedArchitectureFamily === fam.id
+                    ? `${fam.badge} ring-1 ring-white/30 shadow-md scale-105`
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border-white/5'
+                }`}
+              >
+                {fam.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── CATALOG SCOPE FILTER BAR (Master Admin vs Community Shared vs My Personal Models) ── */}

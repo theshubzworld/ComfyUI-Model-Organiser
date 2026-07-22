@@ -178,6 +178,14 @@ export function WorkflowSelector({
         {filteredWorkflows.map(wf => {
           const isSelected = selectedWorkflowIds.includes(wf.id);
           const modelCount = wf.models?.length || 0;
+          const nameLower = (wf.name || '').toLowerCase();
+          let archTag = '';
+          if (nameLower.includes('ltx')) archTag = 'LTX-Video';
+          else if (nameLower.includes('wan')) archTag = 'Wan 2.1';
+          else if (nameLower.includes('flux') || nameLower.includes('klein')) archTag = 'Flux.1';
+          else if (nameLower.includes('sdxl') || nameLower.includes('realism')) archTag = 'SDXL';
+          else if (nameLower.includes('qwen')) archTag = 'Qwen';
+          else if (nameLower.includes('hunyuan')) archTag = 'Hunyuan';
 
           return (
             <div
@@ -185,7 +193,7 @@ export function WorkflowSelector({
               onClick={() => onToggleWorkflow(wf.id)}
               className={`p-3 rounded-xl border transition-all cursor-pointer select-none flex items-start justify-between gap-2 ${
                 isSelected 
-                  ? 'bg-gradient-to-br from-violet-900/40 to-indigo-900/30 border-violet-500 shadow-xl shadow-violet-600/15 ring-1 ring-violet-500/50' 
+                  ? 'bg-gradient-to-br from-violet-900/40 to-indigo-900/30 border-violet-500 shadow-xl shadow-violet-600/15 ring-1 ring-violet-500/50 scale-[1.01]' 
                   : 'bg-slate-900/50 border-white/10 hover:bg-slate-800/80 hover:border-white/20'
               }`}
             >
@@ -200,15 +208,20 @@ export function WorkflowSelector({
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h4 className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                  <h4 className={`text-xs font-extrabold truncate ${isSelected ? 'text-white' : 'text-slate-200'}`}>
                     {wf.name}
                   </h4>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-white/10 font-mono font-semibold">
                       {wf.category}
                     </span>
+                    {archTag && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono font-bold">
+                        {archTag}
+                      </span>
+                    )}
                     <span className="text-[9px] text-slate-400 font-mono font-semibold">
-                      {modelCount} {modelCount === 1 ? 'model' : 'models'}
+                      {modelCount} models
                     </span>
                   </div>
                 </div>
