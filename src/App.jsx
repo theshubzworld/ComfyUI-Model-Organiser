@@ -219,15 +219,16 @@ export default function App() {
 
             const { data: masterOverrideData } = await supabase
               .from('user_model_overrides')
-              .select('model_id, folder, name, size, is_removed');
+              .select('model_id, folder, name, size, url, is_removed');
             if (masterOverrideData) {
               masterOverrideData.forEach(row => {
-                masterOverridesMap[row.model_id] = {
-                  folder: row.folder,
-                  name: row.name,
-                  size: row.size,
-                  isRemoved: row.is_removed
-                };
+                const ov = {};
+                if (row.folder) ov.folder = row.folder;
+                if (row.name) ov.name = row.name;
+                if (row.size) ov.size = row.size;
+                if (row.url) ov.url = row.url;
+                if (row.is_removed !== null && row.is_removed !== undefined) ov.isRemoved = row.is_removed;
+                if (Object.keys(ov).length > 0) masterOverridesMap[row.model_id] = ov;
               });
             }
           } catch (e) {
@@ -274,13 +275,13 @@ export default function App() {
         const userOverridesMap = {};
         if (overrideData) {
           overrideData.forEach(row => {
-            userOverridesMap[row.model_id] = {
-              folder: row.folder,
-              name: row.name,
-              size: row.size,
-              url: row.url,
-              isRemoved: row.is_removed
-            };
+            const ov = {};
+            if (row.folder) ov.folder = row.folder;
+            if (row.name) ov.name = row.name;
+            if (row.size) ov.size = row.size;
+            if (row.url) ov.url = row.url;
+            if (row.is_removed !== null && row.is_removed !== undefined) ov.isRemoved = row.is_removed;
+            if (Object.keys(ov).length > 0) userOverridesMap[row.model_id] = ov;
           });
         }
         const finalOverridesMap = { ...masterOverridesMap, ...userOverridesMap };
@@ -691,7 +692,15 @@ export default function App() {
       const nameKey = (m.name || '').toLowerCase();
       const urlKey = (m.url || '').toLowerCase();
       const override = modelOverrides[m.id] || (nameKey ? modelOverrides[nameKey] : null) || (urlKey ? modelOverrides[urlKey] : null);
-      const merged = override ? { ...m, ...override } : { ...m };
+      let merged = { ...m };
+      if (override) {
+        if (override.folder) merged.folder = override.folder;
+        if (override.size && override.size !== 'Unknown') merged.size = override.size;
+        if (override.name) merged.name = override.name;
+        if (override.url) merged.url = override.url;
+        if (override.isRemoved !== undefined) merged.isRemoved = override.isRemoved;
+        if (override.error) merged.error = override.error;
+      }
       let cleanName = String(merged.name || '').trim()
         .replace(/^(UTF-8|utf-8|utf8|UTF8)['"%27]*['"%27]*/gi, '')
         .replace(/^''/g, '')
