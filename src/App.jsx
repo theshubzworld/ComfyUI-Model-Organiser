@@ -1070,7 +1070,75 @@ export default function App() {
     setIsSaving(false);
   };
 
-  // Single-model individual size & metadata rescan
+  // 1. Open search modal targeting a specific model row
+  const handleSearchModel = useCallback((modelId, modelName) => {
+    setSearchTarget({ modelId, query: modelName || '' });
+    setIsSearchModalOpen(true);
+  }, []);
+
+  // 2. Update any field on any model by id — checks customModels, civitaiModels & modelOverrides (persists to localStorage + Supabase)
+  const handleUpdateModel = useCallback((modelId, updates) => {
+    if (!modelId || !updates || Object.keys(updates).length === 0) return;
+    const lowerId = String(modelId).toLowerCase();
+
+    // Update custom models if matching
+    setCustomModels(prev => {
+      let changed = false;
+      const next = prev.map(m => {
+        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
+          changed = true;
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+      if (changed) {
+        try { localStorage.setItem('simplepod_custom_models', JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+
+    // Update civitai models if matching
+    setCivitaiModels(prev => {
+      let changed = false;
+      const next = prev.map(m => {
+        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
+          changed = true;
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+      if (changed) {
+        try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+
+    // Patch modelOverrides map & ALWAYS persist to localStorage
+    setModelOverrides(prev => {
+      const existing = prev[modelId] || (lowerId ? prev[lowerId] : null) || {};
+      const updatedOverride = { ...existing, ...updates };
+      const next = { ...prev, [modelId]: updatedOverride };
+      if (lowerId && lowerId !== modelId) {
+        next[lowerId] = updatedOverride;
+      }
+      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
+      return next;
+    });
+
+    // Save override directly to Supabase cloud if logged in
+    if (supabase && user) {
+      const row = {
+        user_id: user.id,
+        model_id: modelId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      supabase.from('user_model_overrides').upsert(row, { onConflict: 'user_id, model_id' })
+        .catch(err => console.warn('[App] Supabase override upsert error:', err));
+    }
+  }, [user]);
+
+  // 3. Single-model individual size & metadata rescan
   const [rescanningModelId, setRescanningModelId] = useState(null);
 
   const handleRescanSingleModel = useCallback(async (model) => {
@@ -1101,69 +1169,42 @@ export default function App() {
     } finally {
       setRescanningModelId(null);
     }
-  }, [handleSearchModel]);
+  }, [handleSearchModel, handleUpdateModel]);
 
-  // Update any field on any model by id — checks customModels, civitaiModels & modelOverrides (persists to localStorage + Supabase)
-  const handleUpdateModel = useCallback((modelId, updates) => {
-    if (!modelId || !updates || Object.keys(updates).length === 0) return;
-    const lowerId = String(modelId).toLowerCase();
+  // 4. Called when user picks a search result to attach to a model
+  const handleSearchAttach = async (modelId, { url, size, name }) => {
+    const updates = {};
+    if (url) updates.url = url;
+    if (size && size !== 'Unknown') updates.size = size;
+    if (name && !name.startsWith('civitai_') && !/^\d+$/.test(name)) updates.name = name;
 
-    // 1. Update custom models if matching
-    setCustomModels(prev => {
-      let changed = false;
-      const next = prev.map(m => {
-        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
-          changed = true;
-          return { ...m, ...updates };
+    if (modelId) {
+      handleUpdateModel(modelId, updates);
+
+      // If size is missing/unknown, automatically fetch remote file size for the newly selected URL
+      if (url && (!size || size === 'Unknown')) {
+        setRescanningModelId(modelId);
+        try {
+          const sizeResult = await fetchRemoteFileSize(url);
+          if (sizeResult && typeof sizeResult === 'object') {
+            const fetchedUpdates = {};
+            if (sizeResult.size && sizeResult.size !== 'Unknown') fetchedUpdates.size = sizeResult.size;
+            if (sizeResult.name && (!name || /^\d+$/.test(name))) fetchedUpdates.name = sizeResult.name;
+            if (sizeResult.error) fetchedUpdates.error = sizeResult.error;
+            if (Object.keys(fetchedUpdates).length > 0) {
+              handleUpdateModel(modelId, fetchedUpdates);
+            }
+          } else if (typeof sizeResult === 'string' && sizeResult !== 'Unknown') {
+            handleUpdateModel(modelId, { size: sizeResult });
+          }
+        } catch (e) {
+          console.warn('[App] Auto fetch size for attached URL error:', e);
+        } finally {
+          setRescanningModelId(null);
         }
-        return m;
-      });
-      if (changed) {
-        try { localStorage.setItem('simplepod_custom_models', JSON.stringify(next)); } catch {}
       }
-      return next;
-    });
-
-    // 2. Update civitai models if matching
-    setCivitaiModels(prev => {
-      let changed = false;
-      const next = prev.map(m => {
-        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
-          changed = true;
-          return { ...m, ...updates };
-        }
-        return m;
-      });
-      if (changed) {
-        try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(next)); } catch {}
-      }
-      return next;
-    });
-
-    // 3. Patch modelOverrides map & ALWAYS persist to localStorage
-    setModelOverrides(prev => {
-      const existing = prev[modelId] || (lowerId ? prev[lowerId] : null) || {};
-      const updatedOverride = { ...existing, ...updates };
-      const next = { ...prev, [modelId]: updatedOverride };
-      if (lowerId && lowerId !== modelId) {
-        next[lowerId] = updatedOverride;
-      }
-      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
-      return next;
-    });
-
-    // 4. Save override directly to Supabase cloud if logged in
-    if (supabase && user) {
-      const row = {
-        user_id: user.id,
-        model_id: modelId,
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
-      supabase.from('user_model_overrides').upsert(row, { onConflict: 'user_id, model_id' })
-        .catch(err => console.warn('[App] Supabase override upsert error:', err));
     }
-  }, [user]);
+  };
 
   const handleTogglePublicModel = useCallback((modelId, isPublic) => {
     setCustomModels(prev => prev.map(m => m.id === modelId ? { ...m, isPublic } : m));
@@ -1187,7 +1228,6 @@ export default function App() {
       return next;
     });
   };
-
 
   const handleRemoveModel = useCallback((modelId) => {
     const target = activeModelsList.find(m => m.id === modelId || m.name === modelId || m.url === modelId);
@@ -1230,48 +1270,6 @@ export default function App() {
 
   const handleBulkAddModels = (newModels) => {
     setCustomModels(prev => [...newModels, ...prev]);
-  };
-
-
-  // Open search modal targeting a specific model row
-  const handleSearchModel = useCallback((modelId, modelName) => {
-    setSearchTarget({ modelId, query: modelName || '' });
-    setIsSearchModalOpen(true);
-  }, []);
-
-  // Called when user picks a search result to attach to a model
-  const handleSearchAttach = async (modelId, { url, size, name }) => {
-    const updates = {};
-    if (url) updates.url = url;
-    if (size && size !== 'Unknown') updates.size = size;
-    if (name && !name.startsWith('civitai_') && !/^\d+$/.test(name)) updates.name = name;
-
-    if (modelId) {
-      handleUpdateModel(modelId, updates);
-
-      // If size is missing/unknown, automatically fetch remote file size for the newly selected URL
-      if (url && (!size || size === 'Unknown')) {
-        setRescanningModelId(modelId);
-        try {
-          const sizeResult = await fetchRemoteFileSize(url);
-          if (sizeResult && typeof sizeResult === 'object') {
-            const fetchedUpdates = {};
-            if (sizeResult.size && sizeResult.size !== 'Unknown') fetchedUpdates.size = sizeResult.size;
-            if (sizeResult.name && (!name || /^\d+$/.test(name))) fetchedUpdates.name = sizeResult.name;
-            if (sizeResult.error) fetchedUpdates.error = sizeResult.error;
-            if (Object.keys(fetchedUpdates).length > 0) {
-              handleUpdateModel(modelId, fetchedUpdates);
-            }
-          } else if (typeof sizeResult === 'string' && sizeResult !== 'Unknown') {
-            handleUpdateModel(modelId, { size: sizeResult });
-          }
-        } catch (e) {
-          console.warn('[App] Auto fetch size for attached URL error:', e);
-        } finally {
-          setRescanningModelId(null);
-        }
-      }
-    }
   };
 
   const activeSelectedWorkflows = workflows.filter(wf => selectedWorkflowIds.includes(wf.id));
