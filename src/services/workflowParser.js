@@ -171,32 +171,117 @@ export function extractLinksFromWorkflowJson(jsonObj) {
     });
   }
 
-  // Deduplicate extracted items by URL or Name
-  const dedupped = new Map();
+  // -------------------------------------------------------------
+  // Smart Deduplication & URL-to-Filename Cross Matching Engine
+  // -------------------------------------------------------------
+  const urlMap = new Map(); // filename -> url
+  const itemsWithUrls = [];
+  const itemsWithoutUrls = [];
+
   results.forEach(r => {
     const urlStr = toStr(r.url);
     const nameStr = toStr(r.name);
     const nameLower = nameStr.toLowerCase();
 
-    // Guard: ignore any filename that ends with media extensions (.mp4, .webm, .png, etc.)
+    // Guard: ignore media files
     if (ignoredExtensions.some(ext => nameLower.endsWith(ext) || urlStr.split('?')[0].toLowerCase().endsWith(ext))) {
       return;
     }
 
-    const key = (urlStr || nameStr).toLowerCase();
-    if (key && !dedupped.has(key)) {
-      dedupped.set(key, {
-        id: 'extracted_' + Math.random().toString(36).substring(2, 9),
-        name: nameStr || 'unnamed_model',
-        url: urlStr,
-        folder: normalizeModelFolder(r.folder || 'checkpoints'),
-        nodeType: toStr(r.nodeType) || 'Node',
-        size: 'Unknown'
-      });
+    if (urlStr) {
+      const urlFileName = getFilenameFromUrl(urlStr).toLowerCase();
+      if (urlFileName) {
+        urlMap.set(urlFileName, urlStr);
+        const baseName = urlFileName.replace(/\.(safetensors|ckpt|pth|gguf|bin|pt|onnx|sft)$/i, '');
+        if (baseName && baseName.length >= 3) {
+          urlMap.set(baseName, urlStr);
+        }
+      }
+      itemsWithUrls.push({ ...r, url: urlStr, name: nameStr || getFilenameFromUrl(urlStr) });
+    } else {
+      itemsWithoutUrls.push({ ...r, name: nameStr });
     }
   });
 
-  return Array.from(dedupped.values());
+  const finalMap = new Map();
+
+  // Pass 1: Process all items that HAVE URLs
+  itemsWithUrls.forEach(item => {
+    const urlFileName = getFilenameFromUrl(item.url) || item.name;
+    const nameKey = (urlFileName || item.name || item.url).toLowerCase();
+    
+    if (!finalMap.has(nameKey)) {
+      finalMap.set(nameKey, {
+        id: 'extracted_' + Math.random().toString(36).substring(2, 9),
+        name: urlFileName || item.name,
+        url: item.url,
+        folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, item.name)),
+        nodeType: toStr(item.nodeType) || 'Downloader Node',
+        size: 'Unknown'
+      });
+    } else {
+      const existing = finalMap.get(nameKey);
+      if (item.nodeType && !existing.nodeType.includes(item.nodeType)) {
+        existing.nodeType += ` / ${item.nodeType}`;
+      }
+    }
+  });
+
+  // Pass 2: Process items WITHOUT URLs and smartly cross-match Hugging Face filenames
+  itemsWithoutUrls.forEach(item => {
+    const rawName = toStr(item.name);
+    const nameLower = rawName.toLowerCase();
+    const baseName = nameLower.replace(/\.(safetensors|ckpt|pth|gguf|bin|pt|onnx|sft)$/i, '');
+
+    let matchedUrl = urlMap.get(nameLower) || urlMap.get(baseName);
+
+    if (!matchedUrl) {
+      for (const [key, existing] of finalMap.entries()) {
+        if (key.includes(nameLower) || key.includes(baseName) || nameLower.includes(key) || (baseName && key.includes(baseName))) {
+          matchedUrl = existing.url;
+          if (item.nodeType && !existing.nodeType.includes(item.nodeType)) {
+            existing.nodeType += ` / ${item.nodeType}`;
+          }
+          break;
+        }
+      }
+    }
+
+    if (matchedUrl) {
+      const urlFileName = getFilenameFromUrl(matchedUrl) || rawName;
+      const key = urlFileName.toLowerCase();
+      if (finalMap.has(key)) {
+        const existing = finalMap.get(key);
+        if (item.nodeType && !existing.nodeType.includes(item.nodeType)) {
+          existing.nodeType += ` / ${item.nodeType}`;
+        }
+      } else {
+        finalMap.set(key, {
+          id: 'extracted_' + Math.random().toString(36).substring(2, 9),
+          name: urlFileName || rawName,
+          url: matchedUrl,
+          folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, rawName)),
+          nodeType: toStr(item.nodeType) || 'Loader Node',
+          size: 'Unknown'
+        });
+      }
+    } else {
+      // Standalone loader node without a downloader node in the same JSON
+      const key = nameLower;
+      if (!finalMap.has(key)) {
+        finalMap.set(key, {
+          id: 'extracted_' + Math.random().toString(36).substring(2, 9),
+          name: rawName || 'unnamed_model',
+          url: '',
+          folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, rawName)),
+          nodeType: toStr(item.nodeType) || 'Loader Node',
+          size: 'Unknown'
+        });
+      }
+    }
+  });
+
+  return Array.from(finalMap.values());
 }
 
 export function parseComfyUIWorkflow(jsonObj, catalog = []) {
