@@ -127,8 +127,8 @@ export function LinkAnalyzerModal({ isOpen, onClose, modelsList, onUpdateModel, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel w-full max-w-4xl max-h-[90vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="glass-panel w-[96vw] max-w-7xl h-[92vh] max-h-[95vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden">
         
         {/* Modal Header */}
         <div className="p-6 border-b flex items-center justify-between theme-surface">

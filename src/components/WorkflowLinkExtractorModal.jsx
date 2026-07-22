@@ -72,8 +72,8 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
   const urlCount = extractedItems.filter(i => i.url).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="sv-card relative w-full max-w-4xl max-h-[90vh] rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10 flex flex-col space-y-6 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+      <div className="sv-card relative w-[96vw] max-w-7xl h-[92vh] max-h-[95vh] rounded-3xl p-6 md:p-8 shadow-2xl border border-white/10 flex flex-col space-y-5 overflow-hidden">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
@@ -109,9 +109,9 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
           />
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-cyan-500/30 hover:border-cyan-500/60 bg-cyan-500/5 hover:bg-cyan-500/10 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
+            className="border-2 border-dashed border-cyan-500/30 hover:border-cyan-500/60 bg-cyan-500/5 hover:bg-cyan-500/10 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
           >
-            <Upload className="w-8 h-8 text-cyan-400 mb-1" />
+            <Upload className="w-7 h-7 text-cyan-400 mb-0.5" />
             <span className="text-sm font-bold text-white">
               {fileName ? `File Selected: ${fileName}` : 'Click or Drag & Drop ComfyUI Workflow (.json) File'}
             </span>
@@ -122,7 +122,7 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -131,7 +131,7 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
         {/* Extracted Items Results Table */}
         {extractedItems.length > 0 && (
           <div className="flex-1 min-h-0 flex flex-col space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-300 shrink-0">
               <span className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
                 Found {extractedItems.length} Model Nodes ({urlCount} Direct Download Links)
@@ -156,44 +156,44 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar border border-white/10 rounded-2xl bg-slate-950/60 p-2">
+            <div className="flex-1 overflow-y-auto custom-scrollbar border border-white/10 rounded-2xl bg-slate-950/60 p-3">
               <table className="w-full text-left text-xs text-slate-300 border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="p-2.5">Model Filename</th>
-                    <th className="p-2.5">ComfyUI Folder</th>
-                    <th className="p-2.5">Node Type</th>
-                    <th className="p-2.5">Download URL</th>
+                  <tr className="border-b border-white/10 text-[11px] uppercase tracking-wider text-slate-400 font-bold sticky top-0 bg-slate-950/90 backdrop-blur-md z-10">
+                    <th className="p-3 w-1/4">Model Filename</th>
+                    <th className="p-3 w-1/5">ComfyUI Folder</th>
+                    <th className="p-3 w-1/6">Node Type</th>
+                    <th className="p-3 w-2/5">Download URL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-mono">
                   {extractedItems.map((item) => (
                     <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-2.5 font-bold text-white max-w-[200px] truncate">
+                      <td className="p-3 font-bold text-white max-w-[300px]">
                         <input
                           type="text"
                           value={item.name}
                           onChange={(e) => handleUpdateItemName(item.id, e.target.value)}
-                          className="bg-transparent border-b border-transparent focus:border-cyan-400 outline-none w-full text-white text-xs"
+                          className="bg-transparent border-b border-transparent focus:border-cyan-400 outline-none w-full text-white text-xs py-0.5"
                         />
                       </td>
-                      <td className="p-2.5">
+                      <td className="p-3">
                         <select
                           value={item.folder}
                           onChange={(e) => handleUpdateItemFolder(item.id, e.target.value)}
-                          className="bg-slate-900 text-cyan-300 border border-white/10 rounded px-2 py-1 text-xs"
+                          className="bg-slate-900 text-cyan-300 border border-white/10 rounded px-2.5 py-1 text-xs"
                         >
                           {COMFYUI_MODEL_FOLDERS.map(f => (
                             <option key={f} value={f}>models/{f}</option>
                           ))}
                         </select>
                       </td>
-                      <td className="p-2.5">
-                        <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-white/10">
+                      <td className="p-3">
+                        <span className="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-white/10 inline-block">
                           {item.nodeType}
                         </span>
                       </td>
-                      <td className="p-2.5 max-w-[280px] truncate">
+                      <td className="p-3 max-w-[550px] truncate">
                         {item.url ? (
                           <a
                             href={item.url}
@@ -202,7 +202,7 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
                             className="text-cyan-400 hover:underline flex items-center gap-1.5 truncate"
                             title={item.url}
                           >
-                            <Link className="w-3 h-3 shrink-0" />
+                            <Link className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{item.url}</span>
                           </a>
                         ) : (

@@ -168,7 +168,7 @@
   },
   "https://huggingface.co/jingheya/lotus-depth-g-v2-0-disparity/resolve/main/unet/diffusion_pytorch_model.safetensors": {
     "name": "diffusion_pytorch_model.safetensors",
-    "folder": "checkpoints",
+    "folder": "diffusion_models",
     "size": "3.23 GB"
   },
   "https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors": {
@@ -238,7 +238,7 @@
   },
   "https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it.safetensors": {
     "name": "gemma_3_12B_it.safetensors",
-    "folder": "clip",
+    "folder": "checkpoints",
     "size": "22.71 GB"
   },
   "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors": {
@@ -696,7 +696,7 @@
   },
   "https://huggingface.co/Alissonerdx/LTX-LoRAs/resolve/main/ltx23_edit_anything_global_rank128_v1_9000steps_adamw.safetensors": {
     "name": "ltx23_edit_anything_global_rank128_v1_9000steps_adamw.safetensors",
-    "folder": "loras",
+    "folder": "checkpoints",
     "size": "1.22 GB"
   },
   "https://huggingface.co/Alissonerdx/flux.1-dev-SRPO-LoRas/resolve/main/srpo_32_base_RockerBOO_model_fp16.safetensors": {
@@ -861,7 +861,7 @@
   },
   "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors": {
     "name": "ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",
-    "folder": "diffusion_models",
+    "folder": "checkpoints",
     "size": "23.49 GB"
   },
   "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors": {
@@ -1176,7 +1176,7 @@
   },
   "https://huggingface.co/SulphurAI/Sulphur-2-base/resolve/main/sulphur_dev_fp8mixed.safetensors": {
     "name": "sulphur_dev_fp8mixed.safetensors",
-    "folder": "diffusion_models",
+    "folder": "checkpoints",
     "size": "27.16 GB"
   },
   "https://huggingface.co/TencentARC/PhotoMaker-V2/resolve/main/photomaker-v2.bin": {
@@ -1376,7 +1376,7 @@
   },
   "https://huggingface.co/datasets/comfyuistudio/gemma/resolve/main/gemma_3_12B_it_fp4_mixed.safetensors": {
     "name": "gemma_3_12B_it_fp4_mixed.safetensors",
-    "folder": "text_encoders",
+    "folder": "checkpoints",
     "size": "8.80 GB"
   },
   "https://huggingface.co/datasets/comfyuistudio/gm/resolve/main/added_tokens.json": {
@@ -1641,7 +1641,7 @@
   },
   "https://huggingface.co/valiantcat/LTX-2.3-Transition-LORA/resolve/main/ltx2.3-transition.safetensors": {
     "name": "ltx2.3-transition.safetensors",
-    "folder": "loras",
+    "folder": "checkpoints",
     "size": "372.15 MB"
   },
   "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/OtherLoRa's/DetailEnhancerV1.safetensors": {
@@ -1785,5 +1785,34 @@
   "https://huggingface.co/search?q=Z-Image-Turbo-Fun-Controlnet-Union.safetensors": {
     "name": "Z-Image-Turbo-Fun-Controlnet-Union.safetensors",
     "folder": "controlnet"
+  },
+  "14237": {
+    "folder": "checkpoints"
+  },
+  "14186": {
+    "folder": "checkpoints"
+  },
+  "14187": {
+    "folder": "checkpoints"
+  },
+  "14190": {
+    "folder": "checkpoints"
+  },
+  "14192": {
+    "folder": "checkpoints"
+  },
+  "13971": {
+    "folder": "checkpoints"
+  },
+  "13972": {
+    "folder": "checkpoints"
+  },
+  "13969": {
+    "folder": "checkpoints"
+  },
+  "https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors": {
+    "size": "8.79 GB",
+    "name": "flux-2-klein-9b-fp8.safetensors",
+    "folder": "checkpoints"
   }
 }
