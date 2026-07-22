@@ -8,7 +8,7 @@
     },
     {
       "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
-      "folder": "text_encoders",
+      "folder": "clip",
       "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
       "size": "8.74 GB"
     },
@@ -25,7 +25,7 @@
     },
     {
       "url": "https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
-      "folder": "llm_gguf",
+      "folder": "LLM",
       "name": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
       "size": "4.07 GB"
     },
@@ -53,13 +53,13 @@
     },
     {
       "url": "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors",
-      "folder": "loras/qwen",
+      "folder": "loras",
       "name": "Qwen-Image-Lightning-4steps-V1.0.safetensors",
       "size": "1.58 GB"
     },
     {
       "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors",
-      "folder": "clip",
+      "folder": "diffusion_models",
       "name": "qwen_image_edit_2511_bf16.safetensors"
     },
     {
@@ -79,32 +79,32 @@
     },
     {
       "url": "https://huggingface.co/search?q=yolo_nas_l_fp16.onnx",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "yolo_nas_l_fp16.onnx"
     },
     {
       "url": "https://huggingface.co/search?q=yolo_nas_l_fp16.onnx",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "yolo_nas_l_fp16.onnx"
     },
     {
       "url": "https://huggingface.co/search?q=dw-ll_ucoco_384.onnx",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "dw-ll_ucoco_384.onnx"
     },
     {
       "url": "https://huggingface.co/search?q=dw-ll_ucoco_384.onnx",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "dw-ll_ucoco_384.onnx"
     },
     {
       "url": "https://huggingface.co/search?q=face_yolov8m.pt",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "face_yolov8m.pt"
     },
     {
       "url": "https://huggingface.co/search?q=face_yolov8m.pt",
-      "folder": "checkpoints",
+      "folder": "sams",
       "name": "face_yolov8m.pt"
     },
     {
@@ -149,7 +149,7 @@
     },
     {
       "url": "https://huggingface.co/alexgenovese/reica_models/resolve/021e192bd744c48a85f8ae1832662e77beb9aac7/realvisxlV40_v40LightningBakedvae.safetensors",
-      "folder": "checkpoints",
+      "folder": "vae",
       "name": "realvisxlV40_v40LightningBakedvae.safetensors",
       "size": "6.46 GB"
     },
@@ -226,27 +226,27 @@
     },
     {
       "url": "https://huggingface.co/search?q=gemma_3_12B_it.safetensors",
-      "folder": "checkpoints",
+      "folder": "clip",
       "name": "gemma_3_12B_it.safetensors"
     },
     {
       "url": "https://huggingface.co/search?q=gemma_3_12B_it.safetensors",
-      "folder": "checkpoints",
+      "folder": "clip",
       "name": "gemma_3_12B_it.safetensors"
     },
     {
       "url": "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors",
-      "folder": "text_encoders",
+      "folder": "diffusion_models",
       "name": "ltx-2.3_text_projection_bf16.safetensors"
     },
     {
       "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors",
-      "folder": "text_encoders",
+      "folder": "clip",
       "name": "qwen_3_4b.safetensors"
     },
     {
       "url": "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
-      "folder": "text_encoders",
+      "folder": "clip",
       "name": "qwen_3_8b_fp8mixed.safetensors",
       "size": "7.63 GB"
     },
@@ -269,7 +269,7 @@
     },
     {
       "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
-      "folder": "clip_vision",
+      "folder": "clip",
       "name": "clip_vision_h.safetensors",
       "size": "1.18 GB"
     },
@@ -332,7 +332,7 @@
     },
     {
       "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/ffc8175b07b79f430a1495d086e39e83d59729e0/Wan22_FunReward/Wan2.2-Fun-A14B-InP-LOW-HPS2.1_resized_dynamic_avg_rank_15_bf16.safetensors",
-      "folder": "loras/wan",
+      "folder": "diffusion_models",
       "name": "Wan2.2-Fun-A14B-InP-LOW-HPS2.1_resized_dynamic_avg_rank_15_bf16.safetensors",
       "size": "97.04 MB"
     },
@@ -361,7 +361,7 @@
     },
     {
       "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-      "folder": "clip",
+      "folder": "diffusion_models",
       "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
       "size": "6.27 GB"
     },
@@ -437,19 +437,19 @@
     },
     {
       "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-      "folder": "loras/wan",
+      "folder": "loras",
       "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
       "size": "304.33 MB"
     },
     {
       "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-      "folder": "loras/wan",
+      "folder": "loras",
       "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
       "size": "302.15 MB"
     },
     {
       "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-      "folder": "loras/xxx/wan",
+      "folder": "diffusion_models",
       "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
       "size": "146.39 MB"
     },
@@ -514,33 +514,33 @@
     },
     {
       "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
-      "folder": "ipadapter",
+      "folder": "checkpoints",
       "name": "ip-adapter-plus_sdxl_vit-h.safetensors",
       "size": "808.26 MB"
     },
     {
       "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_fp8_e4m3fn.safetensors",
-      "folder": "clip",
+      "folder": "diffusion_models",
       "name": "qwen_image_edit_fp8_e4m3fn.safetensors"
     },
     {
       "url": "https://huggingface.co/search?q=consistence_edit_v1.safetensors",
-      "folder": "checkpoints",
+      "folder": "diffusion_models",
       "name": "consistence_edit_v1.safetensors"
     },
     {
       "url": "https://huggingface.co/search?q=consistence_edit_v1.safetensors",
-      "folder": "checkpoints",
+      "folder": "diffusion_models",
       "name": "consistence_edit_v1.safetensors"
     },
     {
       "url": "https://huggingface.co/search?q=Qwen-Image-Edit-F2P.safetensors",
-      "folder": "clip",
+      "folder": "diffusion_models",
       "name": "Qwen-Image-Edit-F2P.safetensors"
     },
     {
       "url": "https://huggingface.co/search?q=Qwen-Image-Edit-F2P.safetensors",
-      "folder": "clip",
+      "folder": "diffusion_models",
       "name": "Qwen-Image-Edit-F2P.safetensors"
     },
     {
@@ -621,7 +621,7 @@
     },
     {
       "url": "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors",
-      "folder": "clip",
+      "folder": "unet",
       "name": "clip_l-for-gguf.safetensors",
       "size": "234.74 MB"
     },
@@ -639,7 +639,7 @@
     },
     {
       "url": "https://huggingface.co/lllyasviel/flux1_dev/resolve/main/flux1-dev-fp8.safetensors",
-      "folder": "unet",
+      "folder": "diffusion_models",
       "name": "flux1-dev-fp8.safetensors",
       "size": "16.06 GB"
     },
@@ -651,13 +651,13 @@
     },
     {
       "url": "https://huggingface.co/jackzheng/flux-fill-FP8/resolve/main/fluxFillFP8_v10.safetensors",
-      "folder": "unet",
+      "folder": "diffusion_models",
       "name": "fluxFillFP8_v10.safetensors",
       "size": "11.09 GB"
     },
     {
       "url": "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors",
-      "folder": "loras/FLUX/HYPERFLUX",
+      "folder": "loras",
       "name": "Hyper-FLUX.1-dev-8steps-lora.safetensors",
       "size": "1.29 GB"
     },
@@ -669,19 +669,19 @@
     },
     {
       "url": "https://huggingface.co/Alissonerdx/flux.1-dev-SRPO-LoRas/resolve/main/srpo_32_base_RockerBOO_model_fp16.safetensors",
-      "folder": "loras/FLUX",
+      "folder": "loras/flux",
       "name": "srpo_32_base_RockerBOO_model_fp16.safetensors",
       "size": "301.24 MB"
     },
     {
       "url": "https://huggingface.co/google/siglip-so400m-patch14-384/resolve/main/model.safetensors",
-      "folder": "clip_vision",
+      "folder": "clip",
       "name": "sigclip-vision-patch14-384.safetensors",
       "size": "3.27 GB"
     },
     {
       "url": "https://huggingface.co/Comfy-Org/Flux1-Redux-Dev/resolve/main/flux1-redux-dev.safetensors",
-      "folder": "style_models",
+      "folder": "diffusion_models",
       "name": "flux1-redux-dev.safetensors",
       "size": "123.08 MB"
     },
@@ -693,7 +693,7 @@
     },
     {
       "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl_vit-h.safetensors",
-      "folder": "ipadapter",
+      "folder": "checkpoints",
       "name": "ip-adapter_sdxl_vit-h.safetensors",
       "size": "666.04 MB"
     },
@@ -717,7 +717,7 @@
     },
     {
       "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-      "folder": "loras/wan",
+      "folder": "loras",
       "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
       "size": "353.94 MB"
     },
@@ -759,37 +759,37 @@
     },
     {
       "url": "https://huggingface.co/JunkyByte/easy_ViTPose/resolve/main/onnx/wholebody/vitpose-l-wholebody.onnx",
-      "folder": "detection",
+      "folder": "sams",
       "name": "vitpose-l-wholebody.onnx",
       "size": "1.15 GB"
     },
     {
       "url": "https://huggingface.co/Wan-AI/Wan2.2-Animate-14B/resolve/main/process_checkpoint/det/yolov10m.onnx",
-      "folder": "detection",
+      "folder": "sams",
       "name": "yolov10m.onnx",
       "size": "58.80 MB"
     },
     {
       "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
-      "folder": "loras",
+      "folder": "diffusion_models",
       "name": "wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
       "size": "292.59 MB"
     },
     {
       "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
-      "folder": "loras",
+      "folder": "diffusion_models",
       "name": "wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
       "size": "292.59 MB"
     },
     {
       "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
-      "folder": "loras",
+      "folder": "diffusion_models",
       "name": "wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
       "size": "292.59 MB"
     },
     {
       "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
-      "folder": "loras",
+      "folder": "diffusion_models",
       "name": "wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
       "size": "292.59 MB"
     },
@@ -816,14 +816,14 @@
         },
         {
           "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
           "size": "8.74 GB",
           "nodeType": "CLIPLoader"
         },
         {
           "name": "Qwen-Image-Lightning-4steps-V1.0.safetensors",
-          "folder": "loras/qwen",
+          "folder": "loras",
           "url": "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors",
           "size": "1.58 GB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -844,7 +844,7 @@
         },
         {
           "name": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
-          "folder": "llm_gguf",
+          "folder": "LLM",
           "url": "https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
           "size": "4.07 GB",
           "nodeType": "Searge_LLM_Node"
@@ -887,7 +887,7 @@
       "models": [
         {
           "name": "qwen_image_edit_2511_bf16.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors",
           "size": "Unknown",
           "nodeType": "UNETLoader"
@@ -901,7 +901,7 @@
         },
         {
           "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
           "size": "8.74 GB",
           "nodeType": "CLIPLoader"
@@ -993,7 +993,7 @@
         },
         {
           "name": "realvisxlV40_v40LightningBakedvae.safetensors",
-          "folder": "checkpoints",
+          "folder": "vae",
           "url": "https://huggingface.co/alexgenovese/reica_models/resolve/021e192bd744c48a85f8ae1832662e77beb9aac7/realvisxlV40_v40LightningBakedvae.safetensors",
           "size": "6.46 GB",
           "nodeType": "CheckpointLoaderSimple"
@@ -1007,7 +1007,7 @@
         },
         {
           "name": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
-          "folder": "llm_gguf",
+          "folder": "LLM",
           "url": "https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
           "size": "4.07 GB",
           "nodeType": "Searge_LLM_Node"
@@ -1022,14 +1022,14 @@
       "models": [
         {
           "name": "qwen_0.6b_ace15.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/text_encoders/qwen_0.6b_ace15.safetensors",
           "size": "Unknown",
           "nodeType": "DualCLIPLoader"
         },
         {
           "name": "qwen_1.7b_ace15.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/text_encoders/qwen_1.7b_ace15.safetensors",
           "size": "Unknown",
           "nodeType": "DualCLIPLoader"
@@ -1135,21 +1135,21 @@
         },
         {
           "name": "ltx-2.3_text_projection_bf16.safetensors",
-          "folder": "text_encoders",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors",
           "size": "Unknown",
           "nodeType": "DualCLIPLoader"
         },
         {
           "name": "qwen_3_4b.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors",
           "size": "Unknown",
           "nodeType": "CLIPLoader"
         },
         {
           "name": "qwen_3_8b_fp8mixed.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
           "size": "7.63 GB",
           "nodeType": "CLIPLoader"
@@ -1185,7 +1185,7 @@
       "models": [
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -1269,7 +1269,7 @@
         },
         {
           "name": "Wan2.2-Fun-A14B-InP-LOW-HPS2.1_resized_dynamic_avg_rank_15_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/ffc8175b07b79f430a1495d086e39e83d59729e0/Wan22_FunReward/Wan2.2-Fun-A14B-InP-LOW-HPS2.1_resized_dynamic_avg_rank_15_bf16.safetensors",
           "size": "97.04 MB",
           "nodeType": "WanVideoLoraSelectMulti"
@@ -1291,7 +1291,7 @@
         },
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -1326,28 +1326,28 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1361,7 +1361,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -1418,7 +1418,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -1475,7 +1475,7 @@
         },
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -1510,7 +1510,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -1531,21 +1531,21 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1559,7 +1559,7 @@
         },
         {
           "name": "wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1643,7 +1643,7 @@
         },
         {
           "name": "wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1734,7 +1734,7 @@
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1769,7 +1769,7 @@
         },
         {
           "name": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
-          "folder": "llm_gguf",
+          "folder": "LLM",
           "url": "https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
           "size": "4.07 GB",
           "nodeType": "Searge_LLM_Node"
@@ -1812,21 +1812,21 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "WanVideoLoraSelectMulti"
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "WanVideoLoraSelectMulti"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "WanVideoLoraSelectMulti"
@@ -1904,7 +1904,7 @@
         },
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -1939,21 +1939,21 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -1967,7 +1967,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -1981,7 +1981,7 @@
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -2010,7 +2010,7 @@
       "models": [
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -2074,7 +2074,7 @@
         },
         {
           "name": "realvisxlV40_v40LightningBakedvae.safetensors",
-          "folder": "checkpoints",
+          "folder": "vae",
           "url": "https://huggingface.co/alexgenovese/reica_models/resolve/021e192bd744c48a85f8ae1832662e77beb9aac7/realvisxlV40_v40LightningBakedvae.safetensors",
           "size": "6.46 GB",
           "nodeType": "CheckpointLoaderSimple"
@@ -2102,14 +2102,14 @@
         },
         {
           "name": "ip-adapter-plus_sdxl_vit-h.safetensors",
-          "folder": "ipadapter",
+          "folder": "checkpoints",
           "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
           "size": "808.26 MB",
           "nodeType": "IPAdapterModelLoader"
         },
         {
           "name": "clip_vision_h.safetensors",
-          "folder": "clip_vision",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors",
           "size": "1.18 GB",
           "nodeType": "CLIPVisionLoader"
@@ -2124,7 +2124,7 @@
       "models": [
         {
           "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
           "size": "8.74 GB",
           "nodeType": "CLIPLoader"
@@ -2138,7 +2138,7 @@
         },
         {
           "name": "qwen_image_edit_fp8_e4m3fn.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_fp8_e4m3fn.safetensors",
           "size": "Unknown",
           "nodeType": "UNETLoader"
@@ -2152,7 +2152,7 @@
         },
         {
           "name": "Qwen-Image-Lightning-4steps-V1.0.safetensors",
-          "folder": "loras/qwen",
+          "folder": "loras",
           "url": "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors",
           "size": "1.58 GB",
           "nodeType": "LoraLoaderModelOnly"
@@ -2166,14 +2166,14 @@
         },
         {
           "name": "consistence_edit_v1.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/search?q=consistence_edit_v1.safetensors",
           "size": "Unknown",
           "nodeType": "LoraLoaderModelOnly"
         },
         {
           "name": "Qwen-Image-Edit-F2P.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/search?q=Qwen-Image-Edit-F2P.safetensors",
           "size": "Unknown",
           "nodeType": "LoraLoaderModelOnly"
@@ -2216,7 +2216,7 @@
         },
         {
           "name": "qwen_3_8b_fp8mixed.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
           "size": "7.63 GB",
           "nodeType": "CLIPLoader"
@@ -2337,7 +2337,7 @@
         },
         {
           "name": "Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
-          "folder": "llm_gguf",
+          "folder": "LLM",
           "url": "https://huggingface.co/MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3.Q4_K_M.gguf",
           "size": "4.07 GB",
           "nodeType": "Searge_LLM_Node"
@@ -2386,7 +2386,7 @@
         },
         {
           "name": "qwen_3_4b.safetensors",
-          "folder": "text_encoders",
+          "folder": "clip",
           "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors",
           "size": "Unknown",
           "nodeType": "CLIPLoader"
@@ -2514,7 +2514,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2606,7 +2606,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2691,7 +2691,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2755,7 +2755,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2805,7 +2805,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2826,21 +2826,21 @@
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -2854,7 +2854,7 @@
         },
         {
           "name": "wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -2918,7 +2918,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -2932,35 +2932,35 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -2974,14 +2974,14 @@
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -2995,7 +2995,7 @@
         },
         {
           "name": "wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -3059,7 +3059,7 @@
         },
         {
           "name": "nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
-          "folder": "clip",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/NSFW-API/NSFW-Wan-UMT5-XXL/resolve/main/nsfw_wan_umt5-xxl_fp8_scaled.safetensors",
           "size": "6.27 GB",
           "nodeType": "CLIPLoader"
@@ -3073,35 +3073,35 @@
         },
         {
           "name": "lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank32_bf16.safetensors",
           "size": "304.33 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
-          "folder": "loras/xxx/wan",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.1_loras/resolve/main/SECRET_SAUCE_WAN2.1_14B_fp8.safetensors",
           "size": "146.39 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_T2V_14B_FusionX_LoRA.safetensors",
           "size": "302.15 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_t2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
@@ -3115,21 +3115,21 @@
         },
         {
           "name": "Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
-          "folder": "loras/wan",
+          "folder": "loras",
           "url": "https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/resolve/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors",
           "size": "353.94 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_highnoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"
         },
         {
           "name": "wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
-          "folder": "loras",
+          "folder": "diffusion_models",
           "url": "https://huggingface.co/comfyuistudio/wan2.2_xxx-loras/resolve/main/wan2.2_i2v_lownoise_pov_missionary_v1.0.safetensors",
           "size": "292.59 MB",
           "nodeType": "Power Lora Loader (rgthree)"

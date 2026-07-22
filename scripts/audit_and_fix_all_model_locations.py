@@ -14,41 +14,43 @@ def canonical_folder(filename, current_folder="checkpoints"):
     if 'vae' in f or f.endswith('_ae.safetensors') or f.endswith('_ae.pt') or f == 'ae.safetensors':
         return 'vae'
         
-    # 2. LoRA / LoCon / DoRA / Slider -> models/loras
-    if any(k in f for k in ['lora', 'locon', 'dora', 'slider', 'hyper_lora']):
+    # 2. LoRA / LoCon / DoRA / Lightning -> models/loras
+    if any(k in f for k in ['lora', 'locon', 'dora', 'slider', 'lightning']):
         return 'loras'
         
-    # 3. Text Encoders / CLIP / T5 / Qwen -> models/clip
-    if any(k in f for k in ['qwen', 't5', 't5xxl', 'clip', 'text_encoder', 'text_encoders', 'umt5', 'openclip']):
-        return 'clip'
-        
-    # 4. ControlNet / Depth / SAM / Annotator -> models/controlnet or models/sams
-    if 'depthanything' in f or 'depth_anything' in f or 'yolox' in f or 'torchscript' in f or 'annotator' in f:
-        return 'sams' if ('depth' in f or 'yolox' in f or 'torchscript' in f) else 'controlnet'
-    if any(k in f for k in ['controlnet', 'control']):
+    # 3. ControlNet / Depth / Pose -> models/controlnet
+    if any(k in f for k in ['controlnet', 'control', 'depthanything', 'openpose']):
         return 'controlnet'
+        
+    # 4. ONNX / Object Detection / Face Parsing / SAM -> models/sams or models/detection
+    if f.endswith('.onnx') or any(k in f for k in ['yolo', 'vitpose', 'torchscript', 'insightface']):
+        return 'insightface' if 'insightface' in f else 'sams'
         
     # 5. Upscale Models -> models/upscale_models
     if any(k in f for k in ['upscale', 'esrgan', 'spandrel', 'realesrgan']):
         return 'upscale_models'
         
-    # 6. GGUF Models
+    # 6. GGUF Models -> models/unet or models/LLM
     if f.endswith('.gguf') or 'gguf' in f:
-        if any(k in f for k in ['flux', 'wan', 'ltx', 'hunyuan', 'cogvideo', 'unet', 'diffusion', 'transformer', 'sdxl', 'sd3']):
+        if any(k in f for k in ['flux', 'wan', 'ltx', 'hunyuan', 'cogvideo', 'unet', 'diffusion', 'transformer', 'sdxl', 'sd3', 'qwen-image', 'qwen_image']):
             return 'unet'
-        if any(k in f for k in ['llama', 'mistral', 'gemma', 'llm']):
+        if any(k in f for k in ['llama', 'mistral', 'gemma', 'llm', 'qwen']):
             return 'LLM'
         return 'unet'
         
     # 7. Split Transformer / Diffusion Models / UNet -> models/diffusion_models
-    if any(k in f for k in ['klein', 'flux', 'ltx', 'wan2', 'wan_2', 'wan', 'hunyuan', 'cogvideo', 'mochi', 'lumina', 'pixart', 'auraflow', 'transformer', 'diffusion', 'unet']):
+    if any(k in f for k in ['klein', 'flux', 'ltx', 'wan2', 'wan_2', 'wan', 'hunyuan', 'cogvideo', 'mochi', 'lumina', 'pixart', 'auraflow', 'transformer', 'diffusion', 'unet', 'qwen_image_', 'qwen-image-', 'edit_']):
         return 'diffusion_models'
+
+    # 8. Text Encoders / CLIP / T5 / Gemma / Qwen VL Text Encoders -> models/clip
+    if any(k in f for k in ['clip', 't5', 't5xxl', 'text_encoder', 'text_encoders', 'umt5', 'openclip', 'sigclip', 'siglip', 'gemma', 'qwen_2.5_vl', 'qwen_3_8b', 'qwen_3_4b', 'qwen_0.6b', 'qwen_1.7b', 'qwen3vl', 'qwenvision']):
+        return 'clip'
         
-    # 8. Checkpoints
+    # 9. Checkpoints
     if any(k in f for k in ['checkpoint', 'sdxl', 'sd_1', 'sd1.5', 'sd15', 'pony', 'illustrious', 'noobai', 'realism']):
         return 'checkpoints'
         
-    return cur or 'checkpoints'
+    return cur if cur != 'checkpoints' else 'checkpoints'
 
 # --- 1. Audit workflowsData.json ---
 JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "data", "workflowsData.json")

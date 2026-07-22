@@ -30,29 +30,26 @@ export function normalizeModelFolder(folder = 'checkpoints') {
 
 export function guessFolderFromFilename(filename = '', defaultType = 'checkpoints') {
   const f = String(filename).toLowerCase().trim();
+  const def = normalizeModelFolder(defaultType);
   
   // 1. VAE Models -> models/vae
-  if (f.includes('vae') || f.endsWith('_ae.safetensors') || f.endsWith('_ae.pt')) {
+  if (f.includes('vae') || f.endsWith('_ae.safetensors') || f.endsWith('_ae.pt') || f === 'ae.safetensors') {
     return 'vae';
   }
   
-  // 2. LoRA / LoCon / DoRA -> models/loras
-  if (f.includes('lora') || f.includes('locon') || f.includes('dora') || f.includes('slider')) {
+  // 2. LoRA / LoCon / DoRA / Lightning -> models/loras
+  if (f.includes('lora') || f.includes('locon') || f.includes('dora') || f.includes('slider') || f.includes('lightning')) {
     return 'loras';
   }
-  
-  // 3. Text Encoders / CLIP / T5 / Qwen -> models/clip
-  if (
-    f.includes('qwen') || f.includes('t5') || f.includes('t5xxl') || 
-    f.includes('clip') || f.includes('text_encoder') || f.includes('text_encoders') ||
-    f.includes('umt5') || f.includes('openclip')
-  ) {
-    return 'clip';
-  }
-  
-  // 4. ControlNet / Depth -> models/controlnet
-  if (f.includes('controlnet') || f.includes('control') || f.includes('depthanything')) {
+
+  // 3. ControlNet / Depth / Pose -> models/controlnet
+  if (f.includes('controlnet') || f.includes('control') || f.includes('depthanything') || f.includes('openpose')) {
     return 'controlnet';
+  }
+
+  // 4. ONNX / Object Detection / Face Parsing / SAM -> models/sams or models/detection
+  if (f.endsWith('.onnx') || f.includes('yolo') || f.includes('vitpose') || f.includes('torchscript') || f.includes('insightface')) {
+    return f.includes('insightface') ? 'insightface' : 'sams';
   }
   
   // 5. Upscale Models -> models/upscale_models
@@ -60,13 +57,14 @@ export function guessFolderFromFilename(filename = '', defaultType = 'checkpoint
     return 'upscale_models';
   }
   
-  // 6. GGUF Models
+  // 6. GGUF Models -> models/unet or models/LLM
   if (f.endsWith('.gguf') || f.includes('gguf')) {
-    // If it's a UNet/Transformer GGUF (flux, wan, ltx, hunyuan, unet, diffusion, sdxl, sd3) -> unet
+    // UNet/Transformer GGUF (flux, wan, ltx, hunyuan, unet, diffusion, sdxl, sd3, qwen-image) -> unet
     if (
       f.includes('flux') || f.includes('wan') || f.includes('ltx') || 
       f.includes('hunyuan') || f.includes('cogvideo') || f.includes('unet') || 
-      f.includes('diffusion') || f.includes('transformer') || f.includes('sdxl') || f.includes('sd3')
+      f.includes('diffusion') || f.includes('transformer') || f.includes('sdxl') || 
+      f.includes('sd3') || f.includes('qwen-image') || f.includes('qwen_image')
     ) {
       return 'unet';
     }
@@ -83,12 +81,25 @@ export function guessFolderFromFilename(filename = '', defaultType = 'checkpoint
     f.includes('wan2') || f.includes('wan_2') || f.includes('wan') || 
     f.includes('hunyuan') || f.includes('cogvideo') || f.includes('mochi') || 
     f.includes('lumina') || f.includes('pixart') || f.includes('auraflow') || 
-    f.includes('transformer') || f.includes('diffusion') || f.includes('unet')
+    f.includes('transformer') || f.includes('diffusion') || f.includes('unet') ||
+    f.includes('qwen_image_') || f.includes('qwen-image-') || f.includes('edit_')
   ) {
     return 'diffusion_models';
   }
 
-  // 8. Full All-in-One Checkpoints
+  // 8. Text Encoders / CLIP / T5 / Gemma / Qwen VL Text Encoders -> models/clip
+  if (
+    f.includes('clip') || f.includes('t5') || f.includes('t5xxl') || 
+    f.includes('text_encoder') || f.includes('text_encoders') ||
+    f.includes('umt5') || f.includes('openclip') || f.includes('sigclip') || 
+    f.includes('siglip') || f.includes('gemma') || f.includes('qwen_2.5_vl') || 
+    f.includes('qwen_3_8b') || f.includes('qwen_3_4b') || f.includes('qwen_0.6b') || 
+    f.includes('qwen_1.7b') || f.includes('qwen3vl') || f.includes('qwenvision')
+  ) {
+    return 'clip';
+  }
+
+  // 9. Full All-in-One Checkpoints
   if (
     f.includes('checkpoint') || f.includes('sdxl') || f.includes('sd_1') || 
     f.includes('sd1.5') || f.includes('sd15') || f.includes('pony') || 
@@ -97,5 +108,6 @@ export function guessFolderFromFilename(filename = '', defaultType = 'checkpoint
     return 'checkpoints';
   }
 
-  return normalizeModelFolder(defaultType);
+  // 10. Default fallback: trust nodeType/defaultType if specific
+  return def !== 'checkpoints' ? def : 'checkpoints';
 }
