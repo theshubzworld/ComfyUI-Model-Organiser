@@ -291,14 +291,16 @@ export function AddModelModal({ isOpen, onClose, onAddModel, onBulkAddModels, on
                 Paste Download Lines (URL target_folder optional_rename)
               </label>
               <textarea
-                rows={7}
-                placeholder={`https://huggingface.co/.../model.safetensors checkpoints custom_name.safetensors\nhttps://huggingface.co/.../vae.safetensors vae`}
+                rows={8}
+                placeholder={`https://civitai.com/api/download/models/2155386?token=abc checkpoints/SDXL/lustifySDXLNSFW_ggwpV7.safetensors\nhttps://civitai.com/api/download/models/2066914 loras/Wan2.2Lenovo.safetensors\nhttps://huggingface.co/.../model.safetensors checkpoints`}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 className="w-full p-3 rounded-xl bg-slate-900/90 border border-white/10 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 font-mono"
               />
-              <p className="text-[11px] text-slate-500 mt-1">
-                Format: <code className="text-violet-300">URL target_directory [custom_filename]</code> (one per line)
+              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Format: <code className="text-violet-300">URL target_path/filename</code> or <code className="text-violet-300">URL folder custom_filename</code>
+                <br />
+                <span className="text-slate-500">Supports HuggingFace & CivitAI download links (with or without API token, token auto-applied if configured)</span>
               </p>
             </div>
 

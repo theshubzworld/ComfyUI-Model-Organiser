@@ -514,37 +514,72 @@ export function parseTextDownloadList(text, catalog = []) {
   const lines = toStr(text).split('\n');
   const items = [];
 
+  // Build catalog lookup maps by URL and version ID
+  const urlCatalogMap = new Map();
+  const versionCatalogMap = new Map();
+  (catalog || []).forEach(m => {
+    if (m.url) {
+      const cleanUrl = m.url.split('?')[0].toLowerCase();
+      urlCatalogMap.set(cleanUrl, m);
+      const match = m.url.match(/\/models\/(\d+)/);
+      if (match) versionCatalogMap.set(match[1], m);
+    }
+  });
+
   lines.forEach(line => {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) return;
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) return;
 
     const parts = trimmed.split(/\s+/);
     if (parts.length >= 1 && parts[0].startsWith('http')) {
       const url = parts[0];
-      const folder_part = parts[1] || 'checkpoints';
-      const custom_name = parts[2] ? parts[2] : '';
-      
-      let folder = folder_part;
-      let filename = custom_name;
+      const secondPart = parts[1] || '';
+      const thirdPart = parts[2] || '';
 
-      if (folder_part.includes('/') || folder_part.includes('\\')) {
-        const p_parts = folder_part.replace(/\\/g, '/').split('/');
-        folder = p_parts[0];
-        const lastPart = p_parts[p_parts.length - 1];
-        if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|zip)$/i.test(lastPart)) {
-          filename = lastPart;
+      let explicitFolder = '';
+      let filename = thirdPart;
+
+      if (secondPart) {
+        const cleanPath = secondPart.replace(/\\/g, '/');
+        const pathSegments = cleanPath.replace(/^models\//, '').split('/');
+        const lastSegment = pathSegments[pathSegments.length - 1];
+
+        if (/\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft|zip)$/i.test(lastSegment)) {
+          filename = lastSegment;
+          if (pathSegments.length > 1) {
+            explicitFolder = pathSegments.slice(0, -1).join('/');
+          }
+        } else {
+          explicitFolder = cleanPath;
         }
       }
+
+      // If filename is not specified on line, check catalog or format generic CivitAI ID name
       if (!filename) {
-        filename = url.split('/').pop().split('?')[0];
+        const cleanUrl = url.split('?')[0].toLowerCase();
+        const vMatch = url.match(/\/models\/(\d+)/);
+        const versionId = vMatch ? vMatch[1] : '';
+
+        const catMatch = urlCatalogMap.get(cleanUrl) || (versionId ? versionCatalogMap.get(versionId) : null);
+        if (catMatch && catMatch.name) {
+          filename = catMatch.name;
+        } else if (url.includes('civitai.com') || url.includes('civitai.red')) {
+          filename = versionId ? `civitai_${versionId}` : 'civitai_model.safetensors';
+        } else {
+          const urlLast = url.split('/').pop().split('?')[0];
+          filename = urlLast || 'model.safetensors';
+        }
       }
 
-      folder = guessFolderFromFilename(filename, folder);
+      // Folder resolution: explicit folder > guess from filename
+      const finalFolder = explicitFolder
+        ? normalizeModelFolder(explicitFolder)
+        : guessFolderFromFilename(filename, 'checkpoints');
 
       items.push({
         id: 'mod_' + Math.random().toString(36).substring(2, 9),
         name: filename,
-        folder: normalizeModelFolder(folder),
+        folder: finalFolder,
         url: url,
         size: 'Unknown',
         source: 'text_import'
