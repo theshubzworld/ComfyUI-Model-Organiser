@@ -1,6 +1,6 @@
 // Canonical ComfyUI model directories. Values are relative to the `models/` root.
 export const COMFYUI_MODEL_FOLDERS = [
-  'AIFSH', 'BiRefNet', 'ControlNetModel', 'Kokorotts', 'LLM', 'OmniConsistency', 'RMBG', 'TheMisto_model',
+  'BiRefNet', 'ControlNetModel', 'Kokorotts', 'LLM', 'OmniConsistency', 'RMBG', 'TheMisto_model',
   'animatediff_models', 'animatediff_motion_lora', 'annotator', 'apisr',
   'audio_encoders', 'blip', 'checkpoints', 'clip', 'clip_interrogator', 'clip_vision',
   'configs', 'controlnet', 'depthanything', 'diffusers', 'diffusion_models', 'dreamo', 'dz_facedetailer',

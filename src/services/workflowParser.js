@@ -121,13 +121,41 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         }
 
         if (url || filename) {
-          // Look ahead up to 4 lines for Output folder:
-          for (let j = i + 1; j <= Math.min(i + 4, lines.length - 1); j++) {
+          // Look ahead up to 5 lines for "Output folder:" label + path
+          for (let j = i + 1; j <= Math.min(i + 5, lines.length - 1); j++) {
             const nextLine = lines[j].trim();
-            const outputFolderMatch = nextLine.match(/(?:Output folder|folder):\s*([^\n\r]+)/i) || 
-                                      nextLine.match(/(?:App\\ComfyUI\\models\\|models\\|models\/)([^\n\r\s]+)/i);
-            if (outputFolderMatch) {
-              folder = outputFolderMatch[1].trim().replace(/\\/g, '/');
+            if (!nextLine) continue;
+
+            // Case A: "Output folder: path/here" — label AND path on same line
+            const sameLine = nextLine.match(/(?:Output\s+folder|folder)\s*:\s*(.+)/i);
+            if (sameLine) {
+              const rawPath = sameLine[1].trim();
+              if (rawPath) {
+                // Strip Windows-style prefix like "App\ComfyUI\models\" or "models\"
+                const stripped = rawPath
+                  .replace(/\\/g, '/')
+                  .replace(/^.*?models\//i, '');
+                folder = stripped;
+                break;
+              } else {
+                // Case B: "Output folder:" alone — path is on the VERY NEXT non-empty line
+                for (let k = j + 1; k <= Math.min(j + 2, lines.length - 1); k++) {
+                  const pathLine = lines[k].trim();
+                  if (!pathLine) continue;
+                  // The path line should look like a filesystem path (contains \ or / or known folder)
+                  if (/[/\\]/.test(pathLine) || /^(loras|checkpoints|unet|controlnet|vae|clip|ipadapter|diffusion_models|text_encoders|upscale_models|sams|LLM|animatediff)/i.test(pathLine)) {
+                    folder = pathLine.replace(/\\/g, '/').replace(/^.*?models\//i, '');
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+
+            // Case C: bare path line starting with App\ComfyUI\models\ or models\
+            const pathMatch = nextLine.match(/(?:App[/\\]ComfyUI[/\\]models[/\\]|models[/\\])(.+)/i);
+            if (pathMatch) {
+              folder = pathMatch[1].replace(/\\/g, '/');
               break;
             }
           }
@@ -135,10 +163,16 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           if (!filename && url) filename = getFilenameFromUrl(url);
 
           if ((url || filename) && isModelFileOrUrl(url, filename)) {
+            // Same rule as TYPE 2: explicit folder from the note wins over filename guessing
+            const resolvedFolder = folder
+              ? normalizeModelFolder(folder)
+              : guessFolderFromFilename(filename, 'checkpoints');
+
             results.push({
               name: filename,
               url: url,
-              folder: guessFolderFromNode(nodeType, filename, folder),
+              folder: resolvedFolder,
+              explicitFolder: Boolean(folder),
               nodeType: 'Markdown Note'
             });
           }
