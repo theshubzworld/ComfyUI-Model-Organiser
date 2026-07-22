@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, Link, Folder, FileText, Layers, Check, Download, RefreshCw, ShoppingBag, AlertCircle } from 'lucide-react';
 import { parseTextDownloadList } from '../services/workflowParser';
 import { COMFYUI_MODEL_FOLDERS, normalizeModelFolder } from '../data/comfyuiFolders';
+import { fetchRemoteFileSize } from '../services/sizeFetcher';
 
 export function AddModelModal({ isOpen, onClose, onAddModel, onBulkAddModels, onUpdateModel, existingModels = [], catalog }) {
   const [tab, setTab] = useState('single'); // 'single' | 'bulk' | 'civitai'
@@ -14,6 +15,7 @@ export function AddModelModal({ isOpen, onClose, onAddModel, onBulkAddModels, on
 
   // Bulk Form State
   const [bulkText, setBulkText] = useState('');
+  const [isResolvingBulk, setIsResolvingBulk] = useState(false);
 
   // CivitAI import state
   const [civitaiStatus, setCivitaiStatus] = useState('idle'); // 'idle'|'loading'|'done'|'error'
@@ -50,15 +52,88 @@ export function AddModelModal({ isOpen, onClose, onAddModel, onBulkAddModels, on
     onClose();
   };
 
-  const handleBulkSubmit = (e) => {
+  const resolveBulkModels = async (models) => {
+    const civitaiToken = localStorage.getItem('simplepod_civitai_token') || '';
+    
+    const resolvedList = await Promise.all(
+      models.map(async (m) => {
+        let updated = { ...m };
+
+        const isGenericName = !updated.name || 
+          /^\d+$/.test(updated.name) || 
+          updated.name.startsWith('civitai_') || 
+          updated.name === 'civitai_model.safetensors' || 
+          updated.name === 'model.safetensors';
+
+        // 1. Resolve name from CivitAI API for generic entries
+        if (isGenericName && updated.url && (updated.url.includes('civitai.com') || updated.url.includes('civitai.red'))) {
+          const vMatch = updated.url.match(/\/models\/(\d+)/);
+          if (vMatch) {
+            const versionId = vMatch[1];
+            try {
+              let apiUrl = `https://civitai.com/api/v1/model-versions/${versionId}`;
+              if (civitaiToken && !updated.url.includes('token=')) {
+                apiUrl += `?token=${civitaiToken}`;
+              }
+              const res = await fetch(apiUrl, { signal: AbortSignal.timeout(6000) });
+              if (res.ok) {
+                const data = await res.json();
+                const primary = (data.files || []).find(f => f.primary) || data.files?.[0];
+                if (primary?.name) {
+                  updated.name = primary.name;
+                }
+                if (primary?.sizeKB && (!updated.size || updated.size === 'Unknown')) {
+                  const mb = primary.sizeKB / 1024;
+                  updated.size = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+                }
+              }
+            } catch (_) {}
+          }
+        }
+
+        // 2. Fetch size if still unknown
+        if ((!updated.size || updated.size === 'Unknown') && updated.url) {
+          try {
+            const sizeRes = await fetchRemoteFileSize(updated.url);
+            if (typeof sizeRes === 'object' && sizeRes.size) {
+              if (sizeRes.size !== 'Unknown') updated.size = sizeRes.size;
+              if (sizeRes.name && (!updated.name || updated.name.startsWith('civitai_'))) {
+                updated.name = sizeRes.name;
+              }
+            } else if (typeof sizeRes === 'string' && sizeRes !== 'Unknown') {
+              updated.size = sizeRes;
+            }
+          } catch (_) {}
+        }
+
+        return updated;
+      })
+    );
+
+    return resolvedList;
+  };
+
+  const handleBulkSubmit = async (e) => {
     e.preventDefault();
-    if (!bulkText.trim()) return;
+    if (!bulkText.trim() || isResolvingBulk) return;
 
     const parsedModels = parseTextDownloadList(bulkText, catalog);
-    onBulkAddModels(parsedModels);
-    
-    setBulkText('');
-    onClose();
+    if (parsedModels.length === 0) return;
+
+    setIsResolvingBulk(true);
+    try {
+      const resolvedModels = await resolveBulkModels(parsedModels);
+      onBulkAddModels(resolvedModels);
+      setBulkText('');
+      onClose();
+    } catch (err) {
+      console.error('Bulk resolve error:', err);
+      onBulkAddModels(parsedModels);
+      setBulkText('');
+      onClose();
+    } finally {
+      setIsResolvingBulk(false);
+    }
   };
 
   const handleCivitaiImport = async () => {
@@ -308,15 +383,24 @@ export function AddModelModal({ isOpen, onClose, onAddModel, onBulkAddModels, on
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium"
+                disabled={isResolvingBulk}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 text-xs font-medium"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-md shadow-violet-600/30"
+                disabled={isResolvingBulk || !bulkText.trim()}
+                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-violet-600/30 flex items-center gap-2"
               >
-                Add All Items
+                {isResolvingBulk ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Resolving & Fetching...</span>
+                  </>
+                ) : (
+                  <span>Add All Items</span>
+                )}
               </button>
             </div>
           </form>
