@@ -20,7 +20,30 @@ export function extractLinksFromWorkflowJson(jsonObj) {
 
   const results = [];
   const urlRegex = /https?:\/\/[^\s"']+/gi;
-  const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt'];
+  const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt', '.sft'];
+  const ignoredExtensions = ['.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.flac', '.ogg', '.m4a', '.txt', '.json', '.html', '.css', '.js', '.py'];
+
+  const isModelFileOrUrl = (url, filename) => {
+    const urlLower = toStr(url).toLowerCase();
+    const fileLower = toStr(filename).toLowerCase();
+
+    // 1. Exclude ignored media / code / document extensions
+    if (ignoredExtensions.some(ext => fileLower.endsWith(ext) || urlLower.split('?')[0].endsWith(ext))) {
+      return false;
+    }
+
+    // 2. Accept CivitAI & HuggingFace model download endpoints
+    if (urlLower.includes('civitai.com/api/download/models') || urlLower.includes('civitai.red') || (urlLower.includes('huggingface.co') && urlLower.includes('/resolve/'))) {
+      return true;
+    }
+
+    // 3. Accept valid AI model file extensions
+    if (validExtensions.some(ext => fileLower.endsWith(ext) || urlLower.split('?')[0].endsWith(ext))) {
+      return true;
+    }
+
+    return false;
+  };
 
   const getFilenameFromUrl = (rawUrl) => {
     const url = toStr(rawUrl);
@@ -43,7 +66,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         if (!m) return;
         const url = toStr(m.url);
         const name = toStr(m.name || m.filename) || (url ? getFilenameFromUrl(url) : '');
-        if (name || url) {
+        if ((name || url) && isModelFileOrUrl(url, name)) {
           results.push({
             name: name,
             url: url,
@@ -65,17 +88,19 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           matches.forEach(rawUrl => {
             const cleanUrl = rawUrl.replace(/[,\)"']+$/, '');
             const filename = getFilenameFromUrl(cleanUrl);
-            results.push({
-              name: filename,
-              url: cleanUrl,
-              folder: guessFolderFromNode(nodeType || keyHint, filename),
-              nodeType: toStr(nodeType) || 'Downloader Node'
-            });
+            if (isModelFileOrUrl(cleanUrl, filename)) {
+              results.push({
+                name: filename,
+                url: cleanUrl,
+                folder: guessFolderFromNode(nodeType || keyHint, filename),
+                nodeType: toStr(nodeType) || 'Downloader Node'
+              });
+            }
           });
         } else {
           // Check if string ends with model extension
           const lower = val.toLowerCase();
-          if (validExtensions.some(ext => lower.endsWith(ext))) {
+          if (validExtensions.some(ext => lower.endsWith(ext)) && !ignoredExtensions.some(ext => lower.endsWith(ext))) {
             const filename = val.split(/[/\\]/).pop();
             results.push({
               name: filename,
@@ -92,7 +117,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         if (rawUrl || rawName) {
           const url = rawUrl;
           const name = rawName || getFilenameFromUrl(url);
-          if (name || url) {
+          if ((name || url) && isModelFileOrUrl(url, name)) {
             results.push({
               name: name,
               url: url,
