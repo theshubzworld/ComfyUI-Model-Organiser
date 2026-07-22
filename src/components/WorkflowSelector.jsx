@@ -142,7 +142,7 @@ export function WorkflowSelector({
               onClick={() => setActiveCategory(cat)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
                 activeCategory === cat 
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30 scale-105' 
+                  ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30' 
                   : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-white/10'
               }`}
             >
@@ -174,7 +174,7 @@ export function WorkflowSelector({
       </div>
 
       {/* Workflow Selection Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 max-h-[22rem] overflow-y-auto pr-1 lg:flex-1 lg:min-h-0 lg:max-h-none lg:content-start">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 max-h-[22rem] overflow-y-auto p-1 lg:flex-1 lg:min-h-0 lg:max-h-none lg:content-start">
         {filteredWorkflows.map(wf => {
           const isSelected = selectedWorkflowIds.includes(wf.id);
           const modelCount = wf.models?.length || 0;
@@ -191,40 +191,39 @@ export function WorkflowSelector({
             <div
               key={wf.id}
               onClick={() => onToggleWorkflow(wf.id)}
-              className={`p-3 rounded-xl border transition-all cursor-pointer select-none flex items-start justify-between gap-2 ${
+              className={`p-3.5 rounded-xl border transition-all cursor-pointer select-none flex flex-col justify-between gap-2.5 overflow-hidden ${
                 isSelected 
-                  ? 'bg-gradient-to-br from-violet-900/40 to-indigo-900/30 border-violet-500 shadow-xl shadow-violet-600/15 ring-1 ring-violet-500/50 scale-[1.01]' 
+                  ? 'bg-gradient-to-br from-violet-900/40 to-indigo-900/30 border-violet-500 shadow-lg shadow-violet-600/20 ring-1 ring-violet-500/50' 
                   : 'bg-slate-900/50 border-white/10 hover:bg-slate-800/80 hover:border-white/20'
               }`}
             >
-              <div className="flex items-start gap-2 min-w-0">
-                <div className="mt-0.5 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 w-full">
+                <div className="shrink-0 flex items-center justify-center">
                   {isSelected ? (
-                    <div className="w-4 h-4 rounded bg-violet-600 text-white flex items-center justify-center shadow-md">
-                      <Check className="w-3 h-3 stroke-[3]" />
+                    <div className="w-4.5 h-4.5 rounded-md bg-violet-600 text-white flex items-center justify-center shadow-md shrink-0">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
                   ) : (
-                    <div className="w-4 h-4 rounded border border-white/20 bg-slate-800" />
+                    <div className="w-4.5 h-4.5 rounded-md border border-white/20 bg-slate-800/80 shrink-0" />
                   )}
                 </div>
-                <div className="min-w-0">
-                  <h4 className={`text-xs font-extrabold truncate ${isSelected ? 'text-white' : 'text-slate-200'}`}>
-                    {wf.name}
-                  </h4>
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-white/10 font-mono font-semibold">
-                      {wf.category}
-                    </span>
-                    {archTag && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono font-bold">
-                        {archTag}
-                      </span>
-                    )}
-                    <span className="text-[9px] text-slate-400 font-mono font-semibold">
-                      {modelCount} models
-                    </span>
-                  </div>
-                </div>
+                <h4 className={`text-xs font-extrabold truncate flex-1 min-w-0 ${isSelected ? 'text-white' : 'text-slate-200'}`} title={wf.name}>
+                  {wf.name}
+                </h4>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap w-full">
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-300 border border-white/10 font-mono font-semibold">
+                  {wf.category}
+                </span>
+                {archTag && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono font-bold">
+                    {archTag}
+                  </span>
+                )}
+                <span className="text-[9px] text-slate-400 font-mono font-semibold">
+                  {modelCount} models
+                </span>
               </div>
             </div>
           );
