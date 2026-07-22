@@ -69,7 +69,11 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
     setExtractedItems(prev => prev.map(m => m.id === id ? { ...m, name: newName } : m));
   };
 
-  const urlCount = extractedItems.filter(i => i.url).length;
+  const noUrlCount = extractedItems.length - urlCount;
+
+  const handleRemoveMissingUrls = () => {
+    setExtractedItems(prev => prev.filter(item => Boolean(item.url)));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
@@ -137,6 +141,15 @@ export function WorkflowLinkExtractorModal({ isOpen, onClose, onBulkAddModels })
                 Found {extractedItems.length} Model Nodes ({urlCount} Direct Download Links)
               </span>
               <div className="flex items-center gap-2">
+                {noUrlCount > 0 && (
+                  <button
+                    onClick={handleRemoveMissingUrls}
+                    title="Remove all filenames with missing download links"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all"
+                  >
+                    <span>🗑️ Remove No-URL Items ({noUrlCount})</span>
+                  </button>
+                )}
                 {urlCount > 0 && (
                   <button
                     onClick={handleCopyLinks}

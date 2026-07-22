@@ -75,7 +75,14 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
     setExtractedItems(prev => prev.map(m => m.id === id ? { ...m, name: newName } : m));
   };
 
+  const [urlPresenceFilter, setUrlPresenceFilter] = useState('all'); // 'all' | 'urls_only' | 'no_urls_only'
+
+  const handleRemoveMissingUrls = () => {
+    setExtractedItems(prev => prev.filter(item => Boolean(item.url)));
+  };
+
   const urlCount = extractedItems.filter(i => i.url).length;
+  const noUrlCount = extractedItems.length - urlCount;
   const hfCount = extractedItems.filter(i => i.url && i.url.includes('huggingface.co')).length;
   const civitaiCount = extractedItems.filter(i => i.url && i.url.includes('civitai')).length;
 
@@ -84,7 +91,12 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
                           (item.url || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (item.nodeType || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFolder = folderFilter === 'all' || item.folder === folderFilter;
-    return matchesSearch && matchesFolder;
+    const matchesUrlPresence = 
+      urlPresenceFilter === 'all' ||
+      (urlPresenceFilter === 'urls_only' && Boolean(item.url)) ||
+      (urlPresenceFilter === 'no_urls_only' && !item.url);
+
+    return matchesSearch && matchesFolder && matchesUrlPresence;
   });
 
   return (
@@ -179,6 +191,15 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-slate-400" />
                 <select
+                  value={urlPresenceFilter}
+                  onChange={(e) => setUrlPresenceFilter(e.target.value)}
+                  className="bg-slate-950 text-xs text-cyan-300 border border-cyan-500/30 rounded-xl px-3 py-2 outline-none font-bold"
+                >
+                  <option value="all">All Items ({extractedItems.length})</option>
+                  <option value="urls_only">🔗 With Download URLs Only ({urlCount})</option>
+                  <option value="no_urls_only">⚠️ Missing URLs Only ({noUrlCount})</option>
+                </select>
+                <select
                   value={folderFilter}
                   onChange={(e) => setFolderFilter(e.target.value)}
                   className="bg-slate-950 text-xs text-slate-300 border border-white/15 rounded-xl px-3 py-2 outline-none font-bold"
@@ -192,6 +213,15 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
             </div>
 
             <div className="flex items-center gap-3">
+              {noUrlCount > 0 && (
+                <button
+                  onClick={handleRemoveMissingUrls}
+                  title="Remove all filenames that have no download URL from this extracted list"
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-extrabold transition-all shadow-md"
+                >
+                  <span>🗑️ Remove No-URL Items ({noUrlCount})</span>
+                </button>
+              )}
               {urlCount > 0 && (
                 <button
                   onClick={handleCopyLinks}
