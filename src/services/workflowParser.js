@@ -1,7 +1,7 @@
 /**
  * Client-side ComfyUI JSON Workflow Parser & Link Extraction Engine
  */
-import { normalizeModelFolder } from '../data/comfyuiFolders';
+import { normalizeModelFolder, guessFolderFromFilename } from '../data/comfyuiFolders';
 
 const toStr = (v) => {
   if (v == null) return '';
@@ -83,7 +83,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           results.push({
             name: name,
             url: url,
-            folder: normalizeModelFolder(toStr(m.directory) || guessFolderFromNode(nodeType, name)),
+            folder: guessFolderFromNode(nodeType, name, toStr(m.directory)),
             nodeType: toStr(nodeType)
           });
         }
@@ -134,7 +134,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
             results.push({
               name: name,
               url: url,
-              folder: normalizeModelFolder(toStr(val.folder) || guessFolderFromNode(nodeType, name)),
+              folder: guessFolderFromNode(nodeType, name, toStr(val.folder)),
               nodeType: toStr(nodeType) || 'Downloader Node'
             });
           }
@@ -215,7 +215,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         id: 'extracted_' + Math.random().toString(36).substring(2, 9),
         name: urlFileName || item.name,
         url: item.url,
-        folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, item.name)),
+        folder: guessFolderFromNode(item.nodeType, urlFileName || item.name, item.folder),
         nodeType: toStr(item.nodeType) || 'Downloader Node',
         size: 'Unknown'
       });
@@ -260,7 +260,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           id: 'extracted_' + Math.random().toString(36).substring(2, 9),
           name: urlFileName || rawName,
           url: matchedUrl,
-          folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, rawName)),
+          folder: guessFolderFromNode(item.nodeType, rawName, item.folder),
           nodeType: toStr(item.nodeType) || 'Loader Node',
           size: 'Unknown'
         });
@@ -273,7 +273,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           id: 'extracted_' + Math.random().toString(36).substring(2, 9),
           name: rawName || 'unnamed_model',
           url: '',
-          folder: normalizeModelFolder(item.folder || guessFolderFromNode(item.nodeType, rawName)),
+          folder: guessFolderFromNode(item.nodeType, rawName, item.folder),
           nodeType: toStr(item.nodeType) || 'Loader Node',
           size: 'Unknown'
         });
@@ -311,13 +311,14 @@ export function parseComfyUIWorkflow(jsonObj, catalog = []) {
     const urlBase = mUrl ? mUrl.split('/').pop().toLowerCase() : '';
 
     const matched = (mName ? catalogMap.get(mName) : null) || (urlBase ? catalogMap.get(urlBase) : null) || {};
+    const finalFolder = guessFolderFromNode(m.nodeType, m.name || matched.name, m.folder || matched.folder);
 
     return {
       ...m,
       name: m.name || matched.name || 'unnamed_model',
       url: mUrl || toStr(matched.url),
       size: m.size && m.size !== 'Unknown' ? m.size : (toStr(matched.size) || 'Unknown'),
-      folder: normalizeModelFolder(m.folder || matched.folder || 'checkpoints'),
+      folder: normalizeModelFolder(finalFolder),
       source: 'workflow'
     };
   });
@@ -327,13 +328,6 @@ export function parseTextDownloadList(text, catalog = []) {
   const lines = toStr(text).split('\n');
   const items = [];
 
-  const catalogMap = new Map();
-  (Array.isArray(catalog) ? catalog : []).forEach(item => {
-    if (!item) return;
-    const nameStr = toStr(item.name).toLowerCase();
-    if (nameStr) catalogMap.set(nameStr, item);
-  });
-
   lines.forEach(line => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) return;
@@ -341,17 +335,32 @@ export function parseTextDownloadList(text, catalog = []) {
     const parts = trimmed.split(/\s+/);
     if (parts.length >= 1 && parts[0].startsWith('http')) {
       const url = parts[0];
-      const folder = normalizeModelFolder(parts[1] || 'checkpoints');
-      const name = parts[2] ? parts[2] : url.split('/').pop();
+      const folder_part = parts[1] || 'checkpoints';
+      const custom_name = parts[2] ? parts[2] : '';
+      
+      let folder = folder_part;
+      let filename = custom_name;
 
-      const matched = catalogMap.get(name.toLowerCase()) || {};
+      if (folder_part.includes('/') || folder_part.includes('\\')) {
+        const p_parts = folder_part.replace(/\\/g, '/').split('/');
+        folder = p_parts[0];
+        const lastPart = p_parts[p_parts.length - 1];
+        if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|zip)$/i.test(lastPart)) {
+          filename = lastPart;
+        }
+      }
+      if (!filename) {
+        filename = url.split('/').pop().split('?')[0];
+      }
+
+      folder = guessFolderFromFilename(filename, folder);
 
       items.push({
         id: 'mod_' + Math.random().toString(36).substring(2, 9),
-        name: name,
-        folder: folder,
+        name: filename,
+        folder: normalizeModelFolder(folder),
         url: url,
-        size: matched.size || 'Unknown',
+        size: 'Unknown',
         source: 'text_import'
       });
     }
@@ -360,17 +369,20 @@ export function parseTextDownloadList(text, catalog = []) {
   return items;
 }
 
-export function guessFolderFromNode(nodeType, filename) {
+export function guessFolderFromNode(nodeType, filename, rawFolder = '') {
   const type = toStr(nodeType).toLowerCase();
   const file = toStr(filename).toLowerCase();
 
-  if (type.includes('vae') || file.includes('vae')) return 'vae';
-  if (type.includes('clip') || type.includes('text') || file.includes('clip') || file.includes('t5') || file.includes('text_encoder')) return 'clip';
-  if (type.includes('lora') || file.includes('lora')) return 'loras';
-  if (type.includes('unet') || type.includes('diffusion') || file.includes('unet') || file.includes('diffusion')) return 'diffusion_models';
-  if (type.includes('controlnet') || file.includes('controlnet')) return 'controlnet';
-  if (type.includes('ipadapter') || file.includes('ipadapter') || file.includes('ip-adapter')) return 'ipadapter';
-  if (type.includes('llm') || file.endsWith('.gguf') || file.includes('mistral')) return 'LLM';
-  if (type.includes('depth') || type.includes('preprocessor') || file.endsWith('.pth')) return 'sams';
-  return 'checkpoints';
+  let defaultType = 'checkpoints';
+  if (type.includes('vae') || file.includes('vae')) defaultType = 'vae';
+  else if (type.includes('clip') || type.includes('text') || file.includes('clip') || file.includes('t5') || file.includes('text_encoder')) defaultType = 'clip';
+  else if (type.includes('lora') || file.includes('lora')) defaultType = 'loras';
+  else if (type.includes('unet') || type.includes('diffusion') || file.includes('unet') || file.includes('diffusion')) defaultType = 'diffusion_models';
+  else if (type.includes('controlnet') || file.includes('controlnet')) defaultType = 'controlnet';
+  else if (type.includes('ipadapter') || file.includes('ipadapter') || file.includes('ip-adapter')) defaultType = 'ipadapter';
+  else if (type.includes('llm') || file.includes('mistral')) defaultType = 'LLM';
+  else if (type.includes('depth') || type.includes('preprocessor') || file.endsWith('.pth')) defaultType = 'sams';
+  else if (rawFolder) defaultType = rawFolder;
+
+  return guessFolderFromFilename(filename, defaultType);
 }

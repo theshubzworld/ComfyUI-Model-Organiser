@@ -35,9 +35,18 @@ export function WorkflowLinkExtractorPage({ onBulkAddModels }) {
   };
 
   const handleCopyLinks = () => {
-    const urls = extractedItems.map(item => item.url).filter(Boolean);
-    if (!urls.length) return;
-    navigator.clipboard.writeText(urls.join('\n'));
+    const scriptLines = extractedItems
+      .filter(item => item.url)
+      .map(item => {
+        const folder = item.folder || 'checkpoints';
+        const urlFileName = item.url.split('/').pop().split('?')[0];
+        if (item.name && item.name !== urlFileName) {
+          return `${item.url} ${folder} ${item.name}`;
+        }
+        return `${item.url} ${folder}`;
+      });
+    if (!scriptLines.length) return;
+    navigator.clipboard.writeText(scriptLines.join('\n'));
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2500);
   };
