@@ -503,7 +503,7 @@ if os.path.exists(JSON_PATH):
     print(f"Updated workflowsData.json: {updated_cat} catalog items and {updated_wf} workflow models matched.")
 
 # 3. Update Supabase Database
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

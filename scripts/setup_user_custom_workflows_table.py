@@ -33,7 +33,7 @@ CREATE POLICY "Users can manage own custom workflows" ON public.user_custom_work
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 """
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

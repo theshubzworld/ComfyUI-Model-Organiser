@@ -16,7 +16,7 @@ CREATE POLICY "Users can read own, master admin, or public custom models" ON use
   );
 """
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

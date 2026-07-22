@@ -51,7 +51,7 @@ SELECT table_name FROM information_schema.tables
 WHERE table_schema='public' AND table_name IN ('user_selected_workflows', 'user_custom_models', 'user_model_overrides')
 """
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

@@ -36,7 +36,7 @@ for idx, line in enumerate(lines):
 model_list_rows = list(models.values())
 print(f"Loaded {len(model_list_rows)} unique models from master-model-list.txt for fast bulk sync.")
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

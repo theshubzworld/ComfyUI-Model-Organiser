@@ -74,7 +74,7 @@ def seed():
         port=int(os.getenv('SUPABASE_DB_PORT', 5432)),
         dbname=os.getenv('SUPABASE_DB_NAME', 'postgres'),
         user=os.getenv('SUPABASE_DB_USER', 'postgres'),
-        password=os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751'),
+        password=os.getenv('SUPABASE_DB_PASSWORD'),
         sslmode='require',
         connect_timeout=15
     )

@@ -132,7 +132,7 @@ if os.path.exists(TXT_PATH):
     print(f"Updated master-model-list.txt: fixed {txt_changes} model folder locations.")
 
 # --- 3. Audit Supabase Database ---
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

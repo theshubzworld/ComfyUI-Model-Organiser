@@ -28,7 +28,7 @@ WHERE table_schema='public' AND table_name IN ('model_cache','model_list')
 
 import os
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(

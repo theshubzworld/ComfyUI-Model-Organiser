@@ -62,7 +62,7 @@ CREATE POLICY "Users can insert/update own overrides" ON user_model_overrides
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 """
 
-password = os.getenv('SUPABASE_DB_PASSWORD', 'Mycomfyui!!@@751')
+password = os.getenv('SUPABASE_DB_PASSWORD')
 
 try:
     conn = psycopg2.connect(
