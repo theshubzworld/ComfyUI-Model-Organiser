@@ -9,6 +9,7 @@ import { TokenSettingsModal, loadTokens } from './components/TokenSettingsModal'
 import { ModelSearchModal } from './components/ModelSearchModal';
 import { ModelExplorer } from './components/ModelExplorer';
 import { LinkAnalyzerModal } from './components/LinkAnalyzerModal';
+import { WorkflowLinkExtractorModal } from './components/WorkflowLinkExtractorModal';
 import { calculateStorageBreakdown } from './services/sizeCalculator';
 
 import { fetchRemoteFileSize } from './services/sizeFetcher';
@@ -113,6 +114,7 @@ export default function App() {
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isLinkAnalyzerOpen, setIsLinkAnalyzerOpen] = useState(false);
+  const [isLinkExtractorModalOpen, setIsLinkExtractorModalOpen] = useState(false);
   // searchTarget: { modelId, query } — set when opening search from a model row
   const [searchTarget, setSearchTarget] = useState({ modelId: null, query: '' });
 
@@ -1140,6 +1142,7 @@ export default function App() {
                     onSelectAllWorkflows={handleSelectAllWorkflows}
                     onClearWorkflowSelection={handleClearWorkflowSelection}
                     onCustomWorkflowUploaded={handleCustomWorkflowUploaded}
+                    onOpenLinkExtractor={() => setIsLinkExtractorModalOpen(true)}
                     catalog={catalog}
                   />
                 </div>
@@ -1277,6 +1280,12 @@ export default function App() {
         onUpdateModel={handleUpdateModel}
         onBulkUpdateModels={handleBulkUpdateModels}
         onRemoveModel={handleRemoveModel}
+      />
+
+      <WorkflowLinkExtractorModal
+        isOpen={isLinkExtractorModalOpen}
+        onClose={() => setIsLinkExtractorModalOpen(false)}
+        onBulkAddModels={handleBulkAddModels}
       />
 
     </div>

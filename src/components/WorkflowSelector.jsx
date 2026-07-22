@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Sparkles, Upload, CheckSquare, Square, Search, X, Check, Layers } from 'lucide-react';
+import { Sparkles, Upload, CheckSquare, Square, Search, X, Check, Layers, FileJson } from 'lucide-react';
 import { parseComfyUIWorkflow, parseTextDownloadList } from '../services/workflowParser';
 
 export function WorkflowSelector({ 
@@ -9,6 +9,7 @@ export function WorkflowSelector({
   onSelectAllWorkflows, 
   onClearWorkflowSelection,
   onCustomWorkflowUploaded,
+  onOpenLinkExtractor,
   catalog
 }) {
   const [activeCategory, setActiveCategory] = useState('ALL');
@@ -102,6 +103,17 @@ export function WorkflowSelector({
             <Upload className="w-4 h-4" />
             <span>Upload Workflow JSON</span>
           </button>
+
+          {onOpenLinkExtractor && (
+            <button
+              onClick={onOpenLinkExtractor}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all shadow-md active:scale-95"
+              title="Extract all model download links from any ComfyUI workflow JSON"
+            >
+              <FileJson className="w-4 h-4 text-indigo-400" />
+              <span>Extract Links from JSON</span>
+            </button>
+          )}
 
           <button
             onClick={onSelectAllWorkflows}
