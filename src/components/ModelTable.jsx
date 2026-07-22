@@ -20,11 +20,13 @@ export const ModelTable = memo(function ModelTable({
   onSearchModel,
   onOpenSearch,
   onOpenLinkAnalyzer,
+  onTogglePublicModel,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [selectedFolderTab, setSelectedFolderTab] = useState('all');
+  const [catalogScopeFilter, setCatalogScopeFilter] = useState('all'); // 'all' | 'master' | 'community' | 'personal'
   const [viewMode, setViewMode] = useState('grouped'); // 'grouped' | 'flat'
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [showNodeTypes, setShowNodeTypes] = useState(false);
@@ -120,9 +122,10 @@ export const ModelTable = memo(function ModelTable({
         (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.url || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.folder || '').toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesFolder && matchesSearch;
+      const matchesScope = catalogScopeFilter === 'all' || m.catalogOrigin === catalogScopeFilter;
+      return matchesFolder && matchesSearch && matchesScope;
     });
-  }, [modelsList, activeFolder, searchQuery]);
+  }, [modelsList, activeFolder, searchQuery, catalogScopeFilter]);
 
   // Group filtered models by folder for Category View
   const groupedModels = useMemo(() => {
@@ -206,6 +209,37 @@ export const ModelTable = memo(function ModelTable({
           ) : (
             <div className="flex items-center gap-2 truncate">
               <span className="truncate font-bold text-white text-xs sm:text-sm" title={model.name}>{model.name}</span>
+              
+              {/* Origin Badges */}
+              {model.catalogOrigin === 'master' && (
+                <span className="text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold shrink-0" title="Official Master Admin Model">
+                  👑 Master
+                </span>
+              )}
+              {model.catalogOrigin === 'community' && (
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-semibold shrink-0" title="Public Community Shared Model">
+                  🌐 Community
+                </span>
+              )}
+              {model.catalogOrigin === 'personal' && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-mono font-semibold" title="Personal Custom Model">
+                    👤 Personal
+                  </span>
+                  <button
+                    onClick={() => onTogglePublicModel?.(model.id, !model.isPublic)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-all flex items-center gap-1 ${
+                      model.isPublic 
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400 border-white/10 hover:text-slate-200'
+                    }`}
+                    title={model.isPublic ? "Publicly Shared — Click to make private" : "Private — Click to share publicly with community"}
+                  >
+                    {model.isPublic ? '🌐 Public' : '🔒 Private'}
+                  </button>
+                </div>
+              )}
+
               {showNodeTypes && model.nodeType && (
                 <span 
                   className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0 font-mono"
@@ -486,6 +520,55 @@ export const ModelTable = memo(function ModelTable({
           >
             <Search className="w-4 h-4" />
             <span>Search Models</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── CATALOG SCOPE FILTER BAR (Master Admin vs Community Shared vs My Personal Models) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/70 p-2.5 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 flex items-center gap-1">
+            <Sliders className="w-3.5 h-3.5 text-cyan-400" /> Catalog Source:
+          </span>
+          <button
+            onClick={() => setCatalogScopeFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              catalogScopeFilter === 'all'
+                ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
+            }`}
+          >
+            ✨ All Models ({modelsList.length})
+          </button>
+          <button
+            onClick={() => setCatalogScopeFilter('master')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              catalogScopeFilter === 'master'
+                ? 'bg-amber-500/30 text-amber-200 border border-amber-500/50 shadow-md shadow-amber-500/20'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
+            }`}
+          >
+            👑 Master Catalog ({modelsList.filter(m => m.catalogOrigin === 'master').length})
+          </button>
+          <button
+            onClick={() => setCatalogScopeFilter('community')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              catalogScopeFilter === 'community'
+                ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-500/50 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
+            }`}
+          >
+            🌐 Community Shared ({modelsList.filter(m => m.catalogOrigin === 'community').length})
+          </button>
+          <button
+            onClick={() => setCatalogScopeFilter('personal')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              catalogScopeFilter === 'personal'
+                ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-500/50 shadow-md shadow-cyan-500/20'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
+            }`}
+          >
+            👤 My Models ({modelsList.filter(m => m.catalogOrigin === 'personal').length})
           </button>
         </div>
       </div>

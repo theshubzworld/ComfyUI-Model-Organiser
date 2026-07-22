@@ -13,7 +13,11 @@ import { calculateStorageBreakdown } from './services/sizeCalculator';
 
 import { fetchRemoteFileSize } from './services/sizeFetcher';
 import workflowData from './data/workflowsData.json';
+import { useAuth } from './context/AuthContext';
+import { supabase } from './lib/supabase';
 import { normalizeModelFolder } from './data/comfyuiFolders';
+
+const MASTER_ADMIN_EMAIL = 'shubzveo@gmail.com';
 
 export default function App() {
   const [, startTransition] = useTransition();
@@ -65,8 +69,9 @@ export default function App() {
   };
 
 
-  // Custom user added model overrides & custom models
+  // Custom user added model overrides, custom models, and community shared models
   const [customModels, setCustomModels] = useState([]);
+  const [communityModels, setCommunityModels] = useState([]);
 
   // CivitAI models auto-loaded from civitai_download.txt on startup
   // Persisted to localStorage so they survive HMR reloads
@@ -118,6 +123,236 @@ export default function App() {
     return Boolean(hfToken || civitaiToken);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTokenModalOpen]); // re-check after modal closes
+
+  const { user, signOut } = useAuth();
+  const isSyncingFromDbRef = useRef(false);
+
+  // ── Load user preferences from Supabase when logged in ──────────────────────
+  useEffect(() => {
+    if (!user) {
+      // Restore from localStorage when user logs out / guest mode
+      try {
+        const savedWfs = localStorage.getItem('simplepod_selected_workflows');
+        if (savedWfs) setSelectedWorkflowIds(JSON.parse(savedWfs));
+        else {
+          setSelectedWorkflowIds(
+            (workflowData.workflows || [])
+              .filter(wf => wf.category === '0-IMAGE' || wf.category === '2-VIDEO')
+              .map(wf => wf.id)
+          );
+        }
+      } catch (_) {}
+
+      try {
+        const savedCustom = localStorage.getItem('simplepod_custom_models');
+        setCustomModels(savedCustom ? JSON.parse(savedCustom) : []);
+      } catch (_) {}
+
+      try {
+        const savedOverrides = localStorage.getItem('simplepod_model_overrides');
+        if (savedOverrides) {
+          if (savedOverrides.includes('UTF-8') || savedOverrides.includes('utf-8') || savedOverrides.includes('Lenovo') || savedOverrides.includes('Amateur')) {
+            localStorage.removeItem('simplepod_model_overrides');
+            setModelOverrides({});
+          } else {
+            setModelOverrides(JSON.parse(savedOverrides));
+          }
+        } else {
+          setModelOverrides({});
+        }
+      } catch (_) {
+        setModelOverrides({});
+      }
+      return;
+    }
+
+    // User is logged in — fetch preference tables from Supabase (incorporating Master Admin baseline)
+    const loadUserDbData = async () => {
+      isSyncingFromDbRef.current = true;
+      try {
+        const isMasterAdmin = user.email && user.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
+
+        let masterWfIds = null;
+        let masterCustomModels = [];
+        let masterOverridesMap = {};
+
+        // If not master admin, load Master Admin's baseline rows first
+        if (!isMasterAdmin) {
+          try {
+            const { data: masterWfData } = await supabase
+              .from('user_selected_workflows')
+              .select('selected_ids')
+              .limit(1);
+            if (masterWfData && masterWfData.length > 0) {
+              masterWfIds = masterWfData[0].selected_ids;
+            }
+
+            const { data: masterCustomData } = await supabase
+              .from('user_custom_models')
+              .select('id, name, folder, url, size');
+            if (masterCustomData) {
+              masterCustomModels = masterCustomData;
+            }
+
+            const { data: masterOverrideData } = await supabase
+              .from('user_model_overrides')
+              .select('model_id, folder, name, size, is_removed');
+            if (masterOverrideData) {
+              masterOverrideData.forEach(row => {
+                masterOverridesMap[row.model_id] = {
+                  folder: row.folder,
+                  name: row.name,
+                  size: row.size,
+                  isRemoved: row.is_removed
+                };
+              });
+            }
+          } catch (e) {
+            console.warn('[App] Could not load Master Admin baseline:', e);
+          }
+        }
+
+        // 1. Fetch Current User Selected Workflows
+        const { data: wfData } = await supabase
+          .from('user_selected_workflows')
+          .select('selected_ids')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (wfData?.selected_ids) {
+          setSelectedWorkflowIds(wfData.selected_ids);
+        } else if (masterWfIds) {
+          setSelectedWorkflowIds(masterWfIds);
+        }
+
+        // 2. Fetch Current User Custom Models
+        const { data: customData } = await supabase
+          .from('user_custom_models')
+          .select('id, name, folder, url, size')
+          .eq('user_id', user.id);
+
+        const userCustomModels = customData || [];
+        const mergedCustom = [...userCustomModels];
+        const userCustomIds = new Set(userCustomModels.map(m => m.id));
+        masterCustomModels.forEach(m => {
+          if (!userCustomIds.has(m.id)) {
+            mergedCustom.push(m);
+          }
+        });
+        if (mergedCustom.length > 0) {
+          setCustomModels(mergedCustom);
+        }
+
+        // 3. Fetch Current User Overrides
+        const { data: overrideData } = await supabase
+          .from('user_model_overrides')
+          .select('model_id, folder, name, size, is_removed')
+          .eq('user_id', user.id);
+
+        const userOverridesMap = {};
+        if (overrideData) {
+          overrideData.forEach(row => {
+            userOverridesMap[row.model_id] = {
+              folder: row.folder,
+              name: row.name,
+              size: row.size,
+              isRemoved: row.is_removed
+            };
+          });
+        }
+        const finalOverridesMap = { ...masterOverridesMap, ...userOverridesMap };
+        if (Object.keys(finalOverridesMap).length > 0) {
+          setModelOverrides(finalOverridesMap);
+        }
+
+        // 4. Fetch Publicly Shared Community Models from other users
+        const { data: publicData } = await supabase
+          .from('user_custom_models')
+          .select('id, name, folder, url, size, is_public, user_id')
+          .eq('is_public', true)
+          .neq('user_id', user.id);
+        if (publicData) {
+          setCommunityModels(publicData.map(m => ({ ...m, catalogOrigin: 'community', isPublic: true })));
+        }
+      } finally {
+        // Yield execution to allow states to flush
+        setTimeout(() => {
+          isSyncingFromDbRef.current = false;
+        }, 100);
+      }
+    };
+
+    loadUserDbData().catch(err => {
+      console.error('[App] Error loading user database preferences:', err);
+      isSyncingFromDbRef.current = false;
+    });
+  }, [user]);
+
+  // Sync Selected Workflows to Supabase/localStorage
+  useEffect(() => {
+    if (isSyncingFromDbRef.current) return;
+    if (user) {
+      const syncWorkflows = async () => {
+        const { error } = await supabase.from('user_selected_workflows').upsert({
+          user_id: user.id,
+          selected_ids: selectedWorkflowIds,
+          updated_at: new Date().toISOString()
+        });
+        if (error) console.warn('[App] Error syncing selected workflows:', error.message);
+      };
+      syncWorkflows().catch(err => console.warn('[App] Exception syncing selected workflows:', err));
+    } else {
+      try { localStorage.setItem('simplepod_selected_workflows', JSON.stringify(selectedWorkflowIds)); } catch {}
+    }
+  }, [selectedWorkflowIds, user]);
+
+  // Sync Custom Models to Supabase/localStorage
+  useEffect(() => {
+    if (isSyncingFromDbRef.current) return;
+    if (user) {
+      const syncCustom = async () => {
+        await supabase.from('user_custom_models').delete().eq('user_id', user.id);
+        if (customModels.length > 0) {
+          const rows = customModels.map(m => ({
+            user_id: user.id,
+            id: m.id,
+            name: m.name || null,
+            folder: m.folder || 'checkpoints',
+            url: m.url || '',
+            size: m.size || 'Unknown',
+            is_public: Boolean(m.isPublic)
+          }));
+          await supabase.from('user_custom_models').insert(rows);
+        }
+      };
+      syncCustom().catch(err => console.warn('[App] Error syncing custom models:', err));
+    } else {
+      try { localStorage.setItem('simplepod_custom_models', JSON.stringify(customModels)); } catch {}
+    }
+  }, [customModels, user]);
+
+  // Sync Model Overrides to Supabase/localStorage
+  useEffect(() => {
+    if (isSyncingFromDbRef.current) return;
+    if (user) {
+      const syncOverrides = async () => {
+        const rows = Object.entries(modelOverrides).map(([id, item]) => ({
+          user_id: user.id,
+          model_id: id,
+          folder: item.folder || null,
+          name: item.name || null,
+          size: item.size || null,
+          is_removed: Boolean(item.isRemoved),
+          updated_at: new Date().toISOString()
+        }));
+        if (rows.length > 0) {
+          await supabase.from('user_model_overrides').upsert(rows);
+        }
+      };
+      syncOverrides().catch(err => console.warn('[App] Error syncing model overrides:', err));
+    } else {
+      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(modelOverrides)); } catch {}
+    }
+  }, [modelOverrides, user]);
 
   // Workflow Selection handlers
   const handleToggleWorkflow = (id) => {
@@ -184,41 +419,86 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 2. Auto-load all master links from /api/load-model-list
-    fetch('/api/load-model-list')
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(data => {
-        const fetched = data.models || [];
-        if (!fetched.length) return;
+    // 2. Auto-load all master links from /api/load-model-list & Supabase online catalog
+    const loadCatalog = async () => {
+      let fetched = [];
+      try {
+        const r = await fetch('/api/load-model-list');
+        if (r.ok) {
+          const data = await r.json();
+          fetched = data.models || [];
+        }
+      } catch (_) {}
 
-        setCivitaiModels(prev => {
-          const isStaleName = (n) => !n || n.toLowerCase().includes('lenovo') || n.toLowerCase().includes('amateur') || /^\d+$/.test(n) || n.startsWith('civitai_');
-          const mergedMap = new Map();
-          fetched.forEach(m => {
-            if (m.url) mergedMap.set(m.url.toLowerCase(), m);
-          });
-          prev.forEach(m => {
-            if (!m.url) return;
-            const key = m.url.toLowerCase();
-            const existing = mergedMap.get(key);
-            if (!existing) {
-              mergedMap.set(key, m);
-            } else {
-              if (isStaleName(existing.name) && !isStaleName(m.name)) {
-                existing.name = m.name;
+      // Fetch online catalog directly from Supabase DB tables if connected
+      if (supabase) {
+        try {
+          const { data: dbModels } = await supabase
+            .from('model_list')
+            .select('id, url, folder, source, name, size');
+          if (dbModels && dbModels.length > 0) {
+            const { data: cacheRows } = await supabase
+              .from('model_cache')
+              .select('clean_url, name, size, folder');
+            const cacheMap = {};
+            (cacheRows || []).forEach(c => { if (c.clean_url) cacheMap[c.clean_url] = c; });
+
+            const supaModels = dbModels.map(m => {
+              const cKey = m.url ? m.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '') : '';
+              const cached = cacheMap[cKey] || {};
+              return {
+                id: m.id,
+                url: m.url,
+                name: cached.name || m.name || '',
+                folder: cached.folder || m.folder || 'checkpoints',
+                size: cached.size || m.size || '',
+                source: m.source || 'file'
+              };
+            });
+
+            const urlSet = new Set(fetched.map(x => (x.url || '').toLowerCase()));
+            supaModels.forEach(sm => {
+              if (sm.url && !urlSet.has(sm.url.toLowerCase())) {
+                fetched.push(sm);
               }
-              if ((!existing.size || existing.size === 'Unknown') && m.size && m.size !== 'Unknown') {
-                existing.size = m.size;
-              }
-            }
-          });
-          const merged = Array.from(mergedMap.values());
-          try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(merged)); } catch {}
-          console.log(`[model-list] Auto-loaded ${merged.length} models from backend`);
-          return merged;
+            });
+          }
+        } catch (supaErr) {
+          console.warn('[App] Could not fetch online catalog from Supabase:', supaErr);
+        }
+      }
+
+      if (!fetched.length) return;
+
+      setCivitaiModels(prev => {
+        const isStaleName = (n) => !n || n.toLowerCase().includes('lenovo') || n.toLowerCase().includes('amateur') || /^\d+$/.test(n) || n.startsWith('civitai_');
+        const mergedMap = new Map();
+        fetched.forEach(m => {
+          if (m.url) mergedMap.set(m.url.toLowerCase(), m);
         });
-      })
-      .catch(() => {});
+        prev.forEach(m => {
+          if (!m.url) return;
+          const key = m.url.toLowerCase();
+          const existing = mergedMap.get(key);
+          if (!existing) {
+            mergedMap.set(key, m);
+          } else {
+            if (isStaleName(existing.name) && !isStaleName(m.name)) {
+              existing.name = m.name;
+            }
+            if ((!existing.size || existing.size === 'Unknown') && m.size && m.size !== 'Unknown') {
+              existing.size = m.size;
+            }
+          }
+        });
+        const merged = Array.from(mergedMap.values());
+        try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(merged)); } catch {}
+        console.log(`[model-list] Auto-loaded ${merged.length} models from local files & Supabase online catalog`);
+        return merged;
+      });
+    };
+
+    loadCatalog();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -243,7 +523,8 @@ export default function App() {
             url: m.url || '',
             size: m.size || 'Unknown',
             nodeType: m.nodeType || '',
-            source: wf.name
+            source: wf.name,
+            catalogOrigin: 'master'
           });
         }
       });
@@ -273,6 +554,18 @@ export default function App() {
           url: cm.url || '',
           size: cm.size || 'Unknown',
           source: cm.source || 'file',
+          catalogOrigin: 'master'
+        });
+      }
+    });
+
+    // Merge Public Community Shared Models from other users
+    communityModels.forEach(cm => {
+      const key = (cm.url || cm.name || cm.id || '').toLowerCase();
+      if (key && !modelsMap.has(key)) {
+        modelsMap.set(key, {
+          ...cm,
+          catalogOrigin: 'community'
         });
       }
     });
@@ -280,7 +573,10 @@ export default function App() {
     // Custom user models always win (added last, override everything)
     customModels.forEach(cm => {
       const key = (cm.url || cm.name || cm.id || '').toLowerCase();
-      if (key) modelsMap.set(key, { ...cm });
+      if (key) modelsMap.set(key, {
+        ...cm,
+        catalogOrigin: 'personal'
+      });
     });
 
     const list = Array.from(modelsMap.values()).map(m => {
@@ -319,10 +615,15 @@ export default function App() {
   const attemptedResolveRef = useRef(new Set());
 
   useEffect(() => {
-    // Count name frequencies to detect duplicate names across distinct URLs
-    const nameCounts = {};
+    if (!activeModelsFiltered.length) return;
+
+    // Group URLs by name to find conflicts (same name, different URLs)
+    const nameUrls = {};
     activeModelsFiltered.forEach(m => {
-      if (m.name && m.url) nameCounts[m.name] = (nameCounts[m.name] || 0) + 1;
+      if (m.name && m.url) {
+        if (!nameUrls[m.name]) nameUrls[m.name] = new Set();
+        nameUrls[m.name].add(m.url.split('?')[0]);
+      }
     });
 
     const unmappedCivitai = activeModelsFiltered.filter(m => 
@@ -331,7 +632,7 @@ export default function App() {
         !m.name || 
         /^\d+$/.test(m.name) || 
         m.name.startsWith('civitai_') || 
-        (nameCounts[m.name] > 1 && !attemptedResolveRef.current.has(m.id + '_dup'))
+        (nameUrls[m.name] && nameUrls[m.name].size > 1 && !attemptedResolveRef.current.has(m.id + '_dup'))
       ) &&
       !attemptedResolveRef.current.has(m.id)
     );
@@ -341,7 +642,7 @@ export default function App() {
     // Mark these model IDs as attempted to prevent infinite loop re-renders
     unmappedCivitai.forEach(m => {
       attemptedResolveRef.current.add(m.id);
-      if (nameCounts[m.name] > 1) attemptedResolveRef.current.add(m.id + '_dup');
+      if (nameUrls[m.name] && nameUrls[m.name].size > 1) attemptedResolveRef.current.add(m.id + '_dup');
     });
 
     fetch('/api/resolve-civitai-names', {
@@ -385,7 +686,7 @@ export default function App() {
     return calculateStorageBreakdown(activeModelsFiltered);
   }, [activeModelsFiltered]);
 
-  // SAVE TO DISK FUNCTION
+  // SAVE TO DISK & CLOUD FUNCTION
   const handleSaveToDisk = async () => {
     setIsSaving(true);
     try {
@@ -418,6 +719,53 @@ export default function App() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     }
+
+    // Upsert analyzed sizes directly to Supabase cloud database
+    if (supabase) {
+      try {
+        const cacheRows = activeModelsFiltered
+          .filter(m => m && m.url && m.size && m.size !== 'Unknown')
+          .map(m => {
+            const key = m.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '');
+            if (!key) return null;
+            const row = { clean_url: key, size: m.size };
+            if (m.name && !/^\d+$/.test(m.name) && !m.name.startsWith('civitai_')) row.name = m.name;
+            if (m.folder) row.folder = m.folder;
+            return row;
+          })
+          .filter(Boolean);
+
+        for (let i = 0; i < cacheRows.length; i += 100) {
+          await supabase.from('model_cache').upsert(cacheRows.slice(i, i + 100), { onConflict: 'clean_url' });
+        }
+      } catch (err) {
+        console.warn('[App] Exception saving analyzed sizes to cloud model_cache:', err);
+      }
+
+      // Master Admin: Publish baseline catalog to shared global model_list table
+      if (user && user.email && user.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+        try {
+          const listRows = activeModelsFiltered
+            .filter(m => m && m.url)
+            .map(m => ({
+              id: m.id,
+              url: m.url,
+              name: m.name || null,
+              folder: (m.folder || 'checkpoints').replace(/^models\//i, ''),
+              size: m.size || null,
+              source: 'master_admin',
+            }));
+          if (listRows.length > 0) {
+            for (let i = 0; i < listRows.length; i += 100) {
+              await supabase.from('model_list').upsert(listRows.slice(i, i + 100), { onConflict: 'id' });
+            }
+          }
+        } catch (err) {
+          console.warn('[App] Exception publishing master admin catalog to model_list:', err);
+        }
+      }
+    }
+
     setIsSaving(false);
   };
 
@@ -543,7 +891,7 @@ export default function App() {
       freshUpdates[m.id] ? { ...m, ...freshUpdates[m.id] } : m
     );
 
-    // Save to disk
+    // Save to disk & Cloud Supabase model_cache
     setIsSaving(true);
     try {
       const res = await fetch('/api/save-models', {
@@ -556,6 +904,30 @@ export default function App() {
         setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (_) { /* backend offline */ }
+
+    // Upsert analyzed sizes directly to Supabase cloud database
+    if (supabase) {
+      try {
+        const cacheRows = finalModels
+          .filter(m => m && m.url && m.size && m.size !== 'Unknown')
+          .map(m => {
+            const key = m.url.replace('civitai.red', 'civitai.com').replace(/[?&]token=[a-zA-Z0-9_-]+/g, '').replace(/\?&/, '?').replace(/[?&]$/, '');
+            if (!key) return null;
+            const row = { clean_url: key, size: m.size };
+            if (m.name && !/^\d+$/.test(m.name) && !m.name.startsWith('civitai_')) row.name = m.name;
+            if (m.folder) row.folder = m.folder;
+            return row;
+          })
+          .filter(Boolean);
+
+        for (let i = 0; i < cacheRows.length; i += 100) {
+          await supabase.from('model_cache').upsert(cacheRows.slice(i, i + 100), { onConflict: 'clean_url' });
+        }
+      } catch (err) {
+        console.warn('[App] Exception saving analyzed sizes to cloud model_cache:', err);
+      }
+    }
+
     setIsSaving(false);
   };
 
@@ -574,9 +946,12 @@ export default function App() {
     // Always patch modelOverrides too (covers workflow models with overrides)
     setModelOverrides(prev => {
       const next = { ...prev, [modelId]: { ...(prev[modelId] || {}), ...updates } };
-      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
       return next;
     });
+  }, []);
+
+  const handleTogglePublicModel = useCallback((modelId, isPublic) => {
+    setCustomModels(prev => prev.map(m => m.id === modelId ? { ...m, isPublic } : m));
   }, []);
 
   const handleBulkUpdateModels = (bulkMap) => {
@@ -593,7 +968,6 @@ export default function App() {
       Object.entries(bulkMap).forEach(([id, updates]) => {
         next[id] = { ...(next[id] || {}), ...updates };
       });
-      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -603,7 +977,6 @@ export default function App() {
     setCustomModels(prev => prev.filter(m => m.id !== id));
     setModelOverrides(prev => {
       const next = { ...prev, [id]: { ...(prev[id] || {}), isRemoved: true } };
-      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
       return next;
     });
   }, []);
@@ -661,6 +1034,8 @@ export default function App() {
         hasTokens={hasTokens}
         theme={theme}
         onToggleTheme={handleToggleTheme}
+        user={user}
+        onSignOut={signOut}
       />
 
 
@@ -772,6 +1147,7 @@ export default function App() {
             onSearchModel={handleSearchModel}
             onOpenSearch={() => { setSearchTarget({ modelId: null, query: '' }); setIsSearchModalOpen(true); }}
             onOpenLinkAnalyzer={() => setIsLinkAnalyzerOpen(true)}
+            onTogglePublicModel={handleTogglePublicModel}
           />
         )}
 

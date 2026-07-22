@@ -160,10 +160,15 @@ def parse_civitai_txt(filepath, fallback_token=''):
             if version_id:
                 seen_version_ids.add(version_id)
 
+            # Check model cache first to avoid redundant API queries on server start
+            cache = load_model_cache()
+            cached_entry = cache.get(clean_url, {})
+            model_size = cached_entry.get("size", "Unknown")
+            cached_name = cached_entry.get("name", "")
+
             # Determine folder and filename from path_part
             if path_part and ('/' in path_part or '\\' in path_part):
                 # Has a full sub-path like loras/boob_slider.safetensors
-                # Separate top-level folder from the rest
                 path_parts = path_part.replace('\\', '/').split('/')
                 folder = path_parts[0]  # top folder = loras / checkpoints etc.
                 name = path_parts[-1]   # last segment = filename
@@ -172,27 +177,26 @@ def parse_civitai_txt(filepath, fallback_token=''):
                 folder = 'loras'
                 name = path_part
             elif path_part:
-                # Just a folder name — need to fetch from API
+                # Just a folder name — need to fetch from API if not cached
                 folder = path_part
-                name = ''
-                if version_id:
-                    print(f'[civitai] Fetching name for version {version_id}...')
+                name = cached_name
+                if not name and version_id:
+                    print(f'[civitai] Cache miss: Fetching name for version {version_id}...')
                     name = get_civitai_model_name(version_id, api_token, session)
                     if not name:
                         name = f'civitai_{version_id}.safetensors'
             else:
                 folder = 'loras'
-                name = ''
-                if version_id:
+                name = cached_name
+                if not name and version_id:
+                    print(f'[civitai] Cache miss: Fetching name for version {version_id}...')
                     name = get_civitai_model_name(version_id, api_token, session)
                     if not name:
                         name = f'civitai_{version_id}.safetensors'
 
-            cache = load_model_cache()
-            cached_entry = cache.get(clean_url, {})
-            model_size = cached_entry.get("size", "Unknown")
-            if cached_entry.get("name"):
-                name = cached_entry["name"]
+            # If cache had a name, ensure we keep the cached name
+            if cached_name:
+                name = cached_name
 
             # Save to cache if name resolved
             if name and not re.match(r'^\d+$', str(name)) and not str(name).startswith('civitai_'):
@@ -263,20 +267,22 @@ def parse_model_list_txt(filepath=MODEL_LIST_TXT):
             if not filename:
                 filename = os.path.basename(clean_url.split("?")[0])
 
-            # Resolve real filename from CivitAI API if filename is pure numeric ID or starts with civitai_
-            if ("civitai.com" in clean_url or "civitai.red" in clean_url) and (not filename or re.match(r'^\d+$', filename) or filename.startswith('civitai_')):
-                vid_match = re.search(r'/models/(\d+)', clean_url)
-                if vid_match:
-                    version_id = vid_match.group(1)
-                    real_name = get_civitai_model_name(version_id, api_token, session)
-                    if real_name:
-                        filename = real_name
-
-            # Merge cached size & name from model_cache.json
+            # Merge cached size & name from model_cache.json first
             cached_entry = cache.get(clean_url, {})
             model_size = cached_entry.get("size", "Unknown")
-            if cached_entry.get("name"):
-                filename = cached_entry["name"]
+            cached_name = cached_entry.get("name", "")
+
+            if cached_name:
+                filename = cached_name
+            else:
+                # Resolve real filename from CivitAI API if filename is pure numeric ID or starts with civitai_
+                if ("civitai.com" in clean_url or "civitai.red" in clean_url) and (not filename or re.match(r'^\d+$', filename) or filename.startswith('civitai_')):
+                    vid_match = re.search(r'/models/(\d+)', clean_url)
+                    if vid_match:
+                        version_id = vid_match.group(1)
+                        real_name = get_civitai_model_name(version_id, api_token, session)
+                        if real_name:
+                            filename = real_name
 
             # Save to cache if name or size is present
             update_cache_entry(clean_url, size=model_size, name=filename, folder=folder)
@@ -915,6 +921,7 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                 civitai_token = env.get("VITE_CIVITAI_TOKEN", "") or _state.get("civitai_token", "")
                 
                 resolved = {}
+                cache = load_model_cache()
                 with requests.Session() as session:
                     for m in target_models:
                         m_id = m.get("id")
@@ -924,6 +931,14 @@ class SizeCheckerHandler(SimpleHTTPRequestHandler):
                         if not url or ("civitai.com" not in url and "civitai.red" not in url):
                             continue
                         
+                        clean_url, _ = extract_token_from_url(url.replace("civitai.red", "civitai.com"))
+                        cached_entry = cache.get(clean_url, {})
+                        cached_name = cached_entry.get("name", "")
+                        
+                        if cached_name and not re.match(r'^\d+$', str(cached_name)) and not str(cached_name).startswith('civitai_'):
+                            resolved[m_id] = cached_name
+                            continue
+
                         force = bool(data.get("force"))
                         is_generic = not name or re.match(r'^\d+$', str(name)) or str(name).startswith('civitai_') or 'lenovo' in str(name).lower() or 'amateur' in str(name).lower()
                         if force or is_generic:

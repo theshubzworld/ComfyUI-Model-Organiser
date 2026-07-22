@@ -25,7 +25,9 @@ export default function Header({
   onOpenLinkAnalyzer,
   hasTokens,
   theme = 'dark',
-  onToggleTheme
+  onToggleTheme,
+  user,
+  onSignOut
 }) {
   const totalGB = (totalMB / 1024).toFixed(2);
   const quotaPercent = Math.min(100, (totalGB / storageQuotaGB) * 100).toFixed(1);
@@ -224,6 +226,30 @@ export default function Header({
             >
               {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
             </button>
+          )}
+
+          {/* User Profile / Log Out */}
+          {user && (
+            <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+              <div className="theme-surface h-9 px-3 flex items-center gap-2 rounded-xl border">
+                {/* Cloud Sync Status Indicator */}
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Connected to Supabase Cloud" />
+                <span className="text-xs text-slate-300 font-mono font-medium max-w-[100px] truncate" title={user.email}>
+                  {user.email.split('@')[0]}
+                </span>
+                {user.email && user.email.toLowerCase() === 'shubzveo@gmail.com' && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Master Admin
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={onSignOut}
+                className="h-9 px-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition-all active:scale-95"
+              >
+                Log Out
+              </button>
+            </div>
           )}
 
         </div>
