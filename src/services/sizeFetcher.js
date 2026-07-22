@@ -110,9 +110,16 @@ export async function fetchRemoteFileSize(url) {
         if (civRes.ok) {
           const data = await civRes.json();
           const primaryFile = (data.files || []).find(f => f.primary) || data.files?.[0];
-          if (primaryFile && primaryFile.sizeKB) {
-            const mb = primaryFile.sizeKB / 1024;
-            return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+          if (primaryFile) {
+            let sizeStr = 'Unknown';
+            if (primaryFile.sizeKB) {
+              const mb = primaryFile.sizeKB / 1024;
+              sizeStr = mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+            }
+            return {
+              size: sizeStr,
+              name: primaryFile.name || ''
+            };
           }
         }
       }

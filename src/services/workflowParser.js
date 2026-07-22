@@ -20,7 +20,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
 
   const results = [];
   const urlRegex = /https?:\/\/[^\s"']+/gi;
-  const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt', '.sft'];
+  const validExtensions = ['.safetensors', '.pth', '.gguf', '.ckpt', '.bin', '.onnx', '.pt', '.sft', '.zip'];
   const ignoredExtensions = ['.mp4', '.webm', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.flac', '.ogg', '.m4a', '.txt', '.json', '.html', '.css', '.js', '.py'];
   const ignoredNodeTypes = [
     'vhs_videocombine', 'vhs_loadvideo', 'loadvideo', 'savevideo', 'loadimage', 
@@ -222,7 +222,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
               const pathSegments = cleanPath.replace(/^models\//, '').split('/');
               folder = pathSegments[0];
               const lastSegment = pathSegments[pathSegments.length - 1];
-              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft)$/i.test(lastSegment)) {
+              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft|zip)$/i.test(lastSegment)) {
                 filename = lastSegment;
                 folder = pathSegments.slice(0, -1).join('/');
               } else if (pathSegments.length > 1) {
@@ -231,7 +231,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
             } else if (cleanPath.includes('/')) {
               const pathSegments = cleanPath.split('/');
               const lastSegment = pathSegments[pathSegments.length - 1];
-              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft)$/i.test(lastSegment)) {
+              if (!filename && /\.(safetensors|pth|pt|bin|gguf|onnx|ckpt|sft|zip)$/i.test(lastSegment)) {
                 filename = lastSegment;
                 folder = pathSegments.slice(0, -1).join('/');
               } else {
