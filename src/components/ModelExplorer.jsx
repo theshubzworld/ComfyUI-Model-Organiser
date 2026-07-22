@@ -351,7 +351,7 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+    <div className="flex-1 flex flex-col space-y-6 w-full px-4 lg:px-8 py-6">
 
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
@@ -683,7 +683,7 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
       {/* ── RESULTS GRID ── */}
       {status === 'done' && items.length > 0 && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 w-full">
             {items.map(model => {
               const verIdx = selectedVersions[model.id] || 0;
               const versions = model.modelVersions || [];
