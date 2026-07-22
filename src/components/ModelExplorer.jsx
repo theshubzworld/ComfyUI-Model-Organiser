@@ -167,7 +167,7 @@ export function ModelExplorer({ onAddModel, existingModels = [] }) {
   const [typesList, setTypesList] = useState(MODEL_TYPES);
 
   useEffect(() => {
-    fetch('/api/civitai-explorer?enums=true')
+    fetch('/api/civitai-enums')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
         const liveBms = data.BaseModel || data.ActiveBaseModel || [];
