@@ -25,7 +25,9 @@ export const ModelTable = memo(function ModelTable({
   modelViewMode = 'direct',
   setModelViewMode,
   selectedArchitectureFamily = 'all',
-  setSelectedArchitectureFamily
+  setSelectedArchitectureFamily,
+  onRescanSingleModel,
+  rescanningModelId
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -275,15 +277,14 @@ export const ModelTable = memo(function ModelTable({
               <span className={isUnknown ? 'text-amber-400/90 font-normal text-xs italic' : 'text-cyan-300 font-extrabold'}>
                 {model.size || 'Unknown'}
               </span>
-              {isUnknown && (
-                <button
-                  onClick={onFetchMissingSizes}
-                  title="Fetch size for this model"
-                  className="p-1 rounded text-amber-400 hover:bg-amber-500/10 transition-colors shrink-0"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                </button>
-              )}
+              <button
+                onClick={() => onRescanSingleModel ? onRescanSingleModel(model) : onFetchMissingSizes()}
+                disabled={rescanningModelId === model.id}
+                title={model.url ? `Rescan file size for ${model.name || 'this link'}` : "No link found - search for link"}
+                className="p-1 rounded-md text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 transition-colors shrink-0 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${rescanningModelId === model.id ? 'animate-spin text-cyan-400' : ''}`} />
+              </button>
             </div>
           )}
         </td>

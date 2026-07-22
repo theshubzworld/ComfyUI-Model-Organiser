@@ -268,7 +268,7 @@ export default function App() {
         // 3. Fetch Current User Overrides
         const { data: overrideData } = await supabase
           .from('user_model_overrides')
-          .select('model_id, folder, name, size, is_removed')
+          .select('model_id, folder, name, size, url, is_removed')
           .eq('user_id', user.id);
 
         const userOverridesMap = {};
@@ -278,6 +278,7 @@ export default function App() {
               folder: row.folder,
               name: row.name,
               size: row.size,
+              url: row.url,
               isRemoved: row.is_removed
             };
           });
@@ -687,7 +688,10 @@ export default function App() {
 
     // 3. Merge user overrides & detect architecture families
     let list = baseList.map(m => {
-      const merged = modelOverrides[m.id] ? { ...m, ...modelOverrides[m.id] } : { ...m };
+      const nameKey = (m.name || '').toLowerCase();
+      const urlKey = (m.url || '').toLowerCase();
+      const override = modelOverrides[m.id] || (nameKey ? modelOverrides[nameKey] : null) || (urlKey ? modelOverrides[urlKey] : null);
+      const merged = override ? { ...m, ...override } : { ...m };
       let cleanName = String(merged.name || '').trim()
         .replace(/^(UTF-8|utf-8|utf8|UTF8)['"%27]*['"%27]*/gi, '')
         .replace(/^''/g, '')
@@ -1066,24 +1070,100 @@ export default function App() {
     setIsSaving(false);
   };
 
-  // Update any field on any model by id — checks customModels first, then modelOverrides
-  const handleUpdateModel = useCallback((modelId, updates) => {
-    // Update custom models if the id matches
-    setCustomModels(prev => {
-      const idx = prev.findIndex(m => m.id === modelId);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...updates };
-        return next;
+  // Single-model individual size & metadata rescan
+  const [rescanningModelId, setRescanningModelId] = useState(null);
+
+  const handleRescanSingleModel = useCallback(async (model) => {
+    if (!model) return;
+    if (!model.url) {
+      handleSearchModel(model.id, model.name);
+      return;
+    }
+
+    setRescanningModelId(model.id);
+    try {
+      const sizeResult = await fetchRemoteFileSize(model.url);
+      if (sizeResult && typeof sizeResult === 'object') {
+        const updates = {};
+        if (sizeResult.size && sizeResult.size !== 'Unknown') updates.size = sizeResult.size;
+        if (sizeResult.name && (!model.name || model.name === 'model.safetensors' || /^\d+$/.test(model.name))) {
+          updates.name = sizeResult.name;
+        }
+        if (sizeResult.error) updates.error = sizeResult.error;
+        if (Object.keys(updates).length > 0) {
+          handleUpdateModel(model.id, updates);
+        }
+      } else if (typeof sizeResult === 'string' && sizeResult !== 'Unknown') {
+        handleUpdateModel(model.id, { size: sizeResult });
       }
-      return prev;
-    });
-    // Always patch modelOverrides too (covers workflow models with overrides)
-    setModelOverrides(prev => {
-      const next = { ...prev, [modelId]: { ...(prev[modelId] || {}), ...updates } };
+    } catch (e) {
+      console.warn('[App] Rescan single model error:', e);
+    } finally {
+      setRescanningModelId(null);
+    }
+  }, [handleSearchModel]);
+
+  // Update any field on any model by id — checks customModels, civitaiModels & modelOverrides (persists to localStorage + Supabase)
+  const handleUpdateModel = useCallback((modelId, updates) => {
+    if (!modelId || !updates || Object.keys(updates).length === 0) return;
+    const lowerId = String(modelId).toLowerCase();
+
+    // 1. Update custom models if matching
+    setCustomModels(prev => {
+      let changed = false;
+      const next = prev.map(m => {
+        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
+          changed = true;
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+      if (changed) {
+        try { localStorage.setItem('simplepod_custom_models', JSON.stringify(next)); } catch {}
+      }
       return next;
     });
-  }, []);
+
+    // 2. Update civitai models if matching
+    setCivitaiModels(prev => {
+      let changed = false;
+      const next = prev.map(m => {
+        if (m.id === modelId || m.name?.toLowerCase() === lowerId || m.url?.toLowerCase() === lowerId) {
+          changed = true;
+          return { ...m, ...updates };
+        }
+        return m;
+      });
+      if (changed) {
+        try { localStorage.setItem('simplepod_civitai_models', JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+
+    // 3. Patch modelOverrides map & ALWAYS persist to localStorage
+    setModelOverrides(prev => {
+      const existing = prev[modelId] || (lowerId ? prev[lowerId] : null) || {};
+      const updatedOverride = { ...existing, ...updates };
+      const next = { ...prev, [modelId]: updatedOverride };
+      if (lowerId && lowerId !== modelId) {
+        next[lowerId] = updatedOverride;
+      }
+      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
+      return next;
+    });
+
+    // 4. Save override directly to Supabase cloud if logged in
+    if (supabase && user) {
+      const row = {
+        user_id: user.id,
+        model_id: modelId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      supabase.from('user_model_overrides').upsert(row, { onConflict: 'user_id, model_id' })
+        .catch(err => console.warn('[App] Supabase override upsert error:', err));
+    }
+  }, [user]);
 
   const handleTogglePublicModel = useCallback((modelId, isPublic) => {
     setCustomModels(prev => prev.map(m => m.id === modelId ? { ...m, isPublic } : m));
@@ -1103,6 +1183,7 @@ export default function App() {
       Object.entries(bulkMap).forEach(([id, updates]) => {
         next[id] = { ...(next[id] || {}), ...updates };
       });
+      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -1136,10 +1217,11 @@ export default function App() {
       }
     }
 
-    setModelOverrides(prev => ({
-      ...prev,
-      ...newOverrides
-    }));
+    setModelOverrides(prev => {
+      const next = { ...prev, ...newOverrides };
+      try { localStorage.setItem('simplepod_model_overrides', JSON.stringify(next)); } catch {}
+      return next;
+    });
   }, [activeModelsList]);
 
   const handleAddModel = (newModel) => {
@@ -1158,12 +1240,37 @@ export default function App() {
   }, []);
 
   // Called when user picks a search result to attach to a model
-  const handleSearchAttach = (modelId, { url, size, name }) => {
+  const handleSearchAttach = async (modelId, { url, size, name }) => {
     const updates = {};
     if (url) updates.url = url;
     if (size && size !== 'Unknown') updates.size = size;
+    if (name && !name.startsWith('civitai_') && !/^\d+$/.test(name)) updates.name = name;
+
     if (modelId) {
       handleUpdateModel(modelId, updates);
+
+      // If size is missing/unknown, automatically fetch remote file size for the newly selected URL
+      if (url && (!size || size === 'Unknown')) {
+        setRescanningModelId(modelId);
+        try {
+          const sizeResult = await fetchRemoteFileSize(url);
+          if (sizeResult && typeof sizeResult === 'object') {
+            const fetchedUpdates = {};
+            if (sizeResult.size && sizeResult.size !== 'Unknown') fetchedUpdates.size = sizeResult.size;
+            if (sizeResult.name && (!name || /^\d+$/.test(name))) fetchedUpdates.name = sizeResult.name;
+            if (sizeResult.error) fetchedUpdates.error = sizeResult.error;
+            if (Object.keys(fetchedUpdates).length > 0) {
+              handleUpdateModel(modelId, fetchedUpdates);
+            }
+          } else if (typeof sizeResult === 'string' && sizeResult !== 'Unknown') {
+            handleUpdateModel(modelId, { size: sizeResult });
+          }
+        } catch (e) {
+          console.warn('[App] Auto fetch size for attached URL error:', e);
+        } finally {
+          setRescanningModelId(null);
+        }
+      }
     }
   };
 
@@ -1310,6 +1417,8 @@ export default function App() {
             onOpenSearch={() => { setSearchTarget({ modelId: null, query: '' }); setIsSearchModalOpen(true); }}
             onOpenLinkAnalyzer={() => setIsLinkAnalyzerOpen(true)}
             onTogglePublicModel={handleTogglePublicModel}
+            onRescanSingleModel={handleRescanSingleModel}
+            rescanningModelId={rescanningModelId}
           />
         )}
 
