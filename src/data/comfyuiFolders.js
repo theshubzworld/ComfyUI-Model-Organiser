@@ -14,18 +14,44 @@ export const COMFYUI_MODEL_FOLDERS = [
   'vitmatte', 'xlabs'
 ];
 
-/** Accept either `folder` or `models/folder` without duplicating the models root. */
+/**
+ * Normalize a folder path to the primary ComfyUI model directory.
+ * KEY RULE: Only the FIRST segment after models/ matters.
+ * Subfolders (loras/qwen, text_encoders/clip, checkpoints/sdxl) are ignored
+ * — only the top-level folder is returned.
+ *
+ * Exception: ultralytics/bbox and ultralytics/segm keep their subfolder
+ * because they represent distinct model types.
+ */
 export function normalizeModelFolder(folder = 'checkpoints') {
-  const normalized = String(folder)
+  let normalized = String(folder)
     .trim()
-    .replaceAll('\\', '/')
-    .replace(/^models\//i, '')
-    .replace(/^\/+|\/+$/g, '');
+    .replaceAll('\\', '/');
 
-  // Older app versions used this non-standard name for the canonical LLM folder.
+  // Strip full path prefixes like "App/ComfyUI/models/" or "C:/Users/.../models/"
+  // Match only when "models/" is preceded by a slash (i.e. it's not "diffusion_models/")
+  normalized = normalized.replace(/^.*\/models\//i, '');
+  // Also strip a bare "models/" prefix (when the string starts directly with it)
+  normalized = normalized.replace(/^models\//i, '');
+  // Clean leading/trailing slashes
+  normalized = normalized.replace(/^\/+|\/+$/g, '');
+
+  if (!normalized) return 'checkpoints';
+
+  // Alias fixes
   if (normalized.toLowerCase() === 'llm_gguf') return 'LLM';
 
-  return normalized || 'checkpoints';
+  // Take only the PRIMARY folder (first segment) — subfolders don't matter
+  const segments = normalized.split('/').filter(Boolean);
+  const primary = segments[0] || 'checkpoints';
+
+  // ONLY exception: ultralytics keeps bbox/segm subfolder (they are different model types)
+  if (primary.toLowerCase() === 'ultralytics' && segments.length > 1) {
+    const sub = segments[1].toLowerCase();
+    if (sub === 'bbox' || sub === 'segm') return `ultralytics/${segments[1]}`;
+  }
+
+  return primary;
 }
 
 export function guessFolderFromFilename(filename = '', defaultType = 'checkpoints') {

@@ -97,8 +97,19 @@ export function extractLinksFromWorkflowJson(jsonObj) {
     // -----------------------------------------------------------------
     // TYPE 1: Markdown Note Node ("Model: ... Output folder: ...")
     // -----------------------------------------------------------------
-    if (typeStr.includes('note') || typeStr.includes('markdown') || typeStr.includes('displaytext') || fullTextContent.includes('Output folder:')) {
+    if (typeStr.includes('note') || typeStr.includes('markdown') || typeStr.includes('displaytext') || fullTextContent.includes('Output folder') || fullTextContent.includes('output folder')) {
       const lines = fullTextContent.split(/\r?\n/);
+
+      // Strip markdown formatting chars from a line so we can parse the semantic content
+      // Handles: `backtick code`, **bold**, *italic*, ### headings, __underline__
+      const stripMd = (s) => s
+        .replace(/`([^`]*)`/g, '$1')   // `code` → code
+        .replace(/\*\*/g, '')          // **bold**
+        .replace(/__/g, '')            // __underline__
+        .replace(/^#+\s*/, '')         // ### heading
+        .replace(/\*/g, '')            // *italic*
+        .trim();
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
@@ -107,7 +118,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         let filename = '';
         let folder = '';
 
-        // Match Markdown link: [ModelName](https://url)
+        // Match Markdown link: [ModelName](https://url)  — use RAW line (link syntax must stay intact)
         const mdMatch = line.match(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/i);
         if (mdMatch) {
           filename = mdMatch[1].trim();
@@ -116,35 +127,37 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           const urlMatch = line.match(/(https?:\/\/[^\s"'\)]+)/i);
           if (urlMatch) url = urlMatch[1].trim();
 
-          const modelMatch = line.match(/(?:Model|File):\s*([^\s"'\*\#\<\>]+)/i);
+          // Strip markdown first so "### Model:" and "**Model:**" both parse correctly
+          const cleanLine = stripMd(line);
+          const modelMatch = cleanLine.match(/(?:Model|File)\s*:\s*([^\s"'*#<>]+)/i);
           if (modelMatch) filename = modelMatch[1].trim();
         }
 
         if (url || filename) {
-          // Look ahead up to 5 lines for "Output folder:" label + path
-          for (let j = i + 1; j <= Math.min(i + 5, lines.length - 1); j++) {
-            const nextLine = lines[j].trim();
-            if (!nextLine) continue;
+          // Look ahead up to 6 lines for "Output folder:" label + path
+          for (let j = i + 1; j <= Math.min(i + 6, lines.length - 1); j++) {
+            const rawNext = lines[j].trim();
+            if (!rawNext) continue;
 
-            // Case A: "Output folder: path/here" — label AND path on same line
-            const sameLine = nextLine.match(/(?:Output\s+folder|folder)\s*:\s*(.+)/i);
+            const cleanNext = stripMd(rawNext); // strip **, backticks, etc.
+
+            // Case A: "Output folder: path/here" — label AND path on same line (after stripping)
+            const sameLine = cleanNext.match(/(?:Output\s+folder|folder)\s*:\s*(.+)/i);
             if (sameLine) {
               const rawPath = sameLine[1].trim();
-              if (rawPath) {
-                // Strip Windows-style prefix like "App\ComfyUI\models\" or "models\"
-                const stripped = rawPath
-                  .replace(/\\/g, '/')
-                  .replace(/^.*?models\//i, '');
-                folder = stripped;
+              if (rawPath && !/^\*+$/.test(rawPath)) {
+                // Actual path content — strip Windows prefix
+                folder = rawPath.replace(/\\/g, '/').replace(/^.*?models\//i, '');
                 break;
               } else {
-                // Case B: "Output folder:" alone — path is on the VERY NEXT non-empty line
+                // Case B: "Output folder:" alone (or only had ** after stripping)
+                // Path is on the VERY NEXT non-empty line
                 for (let k = j + 1; k <= Math.min(j + 2, lines.length - 1); k++) {
-                  const pathLine = lines[k].trim();
-                  if (!pathLine) continue;
-                  // The path line should look like a filesystem path (contains \ or / or known folder)
-                  if (/[/\\]/.test(pathLine) || /^(loras|checkpoints|unet|controlnet|vae|clip|ipadapter|diffusion_models|text_encoders|upscale_models|sams|LLM|animatediff)/i.test(pathLine)) {
-                    folder = pathLine.replace(/\\/g, '/').replace(/^.*?models\//i, '');
+                  const rawPath2 = stripMd(lines[k].trim());
+                  if (!rawPath2) continue;
+                  // Accept if it contains a path separator or starts with a known folder name
+                  if (/[/\\]/.test(rawPath2) || /^(loras|checkpoints|unet|controlnet|vae|clip|ipadapter|diffusion_models|text_encoders|upscale_models|sams|LLM|animatediff|App)/i.test(rawPath2)) {
+                    folder = rawPath2.replace(/\\/g, '/').replace(/^.*?models\//i, '');
                     break;
                   }
                 }
@@ -152,8 +165,8 @@ export function extractLinksFromWorkflowJson(jsonObj) {
               }
             }
 
-            // Case C: bare path line starting with App\ComfyUI\models\ or models\
-            const pathMatch = nextLine.match(/(?:App[/\\]ComfyUI[/\\]models[/\\]|models[/\\])(.+)/i);
+            // Case C: bare path line (after stripping) starting with App\ComfyUI\models\ or models\
+            const pathMatch = cleanNext.match(/(?:App[/\\]ComfyUI[/\\]models[/\\]|models[/\\])(.+)/i);
             if (pathMatch) {
               folder = pathMatch[1].replace(/\\/g, '/');
               break;
@@ -163,7 +176,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
           if (!filename && url) filename = getFilenameFromUrl(url);
 
           if ((url || filename) && isModelFileOrUrl(url, filename)) {
-            // Same rule as TYPE 2: explicit folder from the note wins over filename guessing
+            // Explicit folder from the note always wins over filename guessing
             const resolvedFolder = folder
               ? normalizeModelFolder(folder)
               : guessFolderFromFilename(filename, 'checkpoints');
@@ -180,6 +193,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
       }
       return;
     }
+
 
     // -----------------------------------------------------------------
     // TYPE 2: Downloader Node (multi-line "URL folder custom_filename")
@@ -274,6 +288,7 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         } else {
           const lower = val.toLowerCase();
           if (validExtensions.some(ext => lower.endsWith(ext)) && !ignoredExtensions.some(ext => lower.endsWith(ext))) {
+            // Take only the filename (last segment) — subfolders don't matter per user rule
             const filename = val.split(/[/\\]/).pop();
             results.push({
               name: filename,
@@ -285,15 +300,25 @@ export function extractLinksFromWorkflowJson(jsonObj) {
         }
       } else if (typeof val === 'object') {
         const rawUrl = toStr(val.url || val.link || val.download_url);
-        const rawName = toStr(val.name || val.filename || val.model_name);
+        // val.lora may contain "subfolder\filename" — extract just the filename (last segment)
+        const rawLora = toStr(val.lora || '');
+        const rawName = rawLora
+          ? rawLora.split(/[/\\]/).pop()
+          : toStr(val.name || val.filename || val.model_name);
+        const rawFolder = toStr(val.folder || val.directory || '');
+
         if (rawUrl || rawName) {
           const url = rawUrl;
           const name = rawName || getFilenameFromUrl(url);
           if ((name || url) && isModelFileOrUrl(url, name)) {
+            const folder = rawFolder
+              ? normalizeModelFolder(rawFolder)
+              : guessFolderFromNode(nodeType, name);
             results.push({
               name: name,
               url: url,
-              folder: guessFolderFromNode(nodeType, name, toStr(val.folder)),
+              folder: folder,
+              explicitFolder: Boolean(rawFolder),
               nodeType: toStr(nodeType) || 'Downloader Node'
             });
           }
